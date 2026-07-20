@@ -1,0 +1,118 @@
+@import "tailwindcss";
+@import "@fontsource-variable/archivo";
+
+/* ---------------------------------------------------------------------------
+   NDC design tokens. Deep navy + warm paper white, restrained orange accent,
+   brown reserved for group identity. Centralized so a future production logo
+   and palette refresh replaces these in one place.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-ink: #0f2440;        /* deepest navy: primary text, nav surface */
+  --color-navy: #16385e;       /* primary actions */
+  --color-navy-soft: #23507f;  /* hover */
+  --color-paper: #faf8f3;      /* warm app background */
+  --color-card: #ffffff;
+  --color-line: #e4dfd5;       /* warm hairline borders */
+  --color-mute: #5b6472;       /* secondary text — passes AA on paper */
+  --color-accent: #d96f22;     /* NDC orange, attention + trial */
+  --color-accent-soft: #fbe9db;
+  --color-brown: #7a5b43;      /* group identity only */
+  --color-pool: #e3edf3;       /* faint water tint for info surfaces */
+  --color-ok: #1e7a46;
+  --color-ok-soft: #e0f0e6;
+  --color-warn: #b45309;
+  --color-warn-soft: #fdf0dd;
+  --color-danger: #b3372f;
+  --color-danger-soft: #f9e5e3;
+
+  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-card: 0.75rem;
+  --shadow-card: 0 1px 2px rgba(15, 36, 64, 0.06), 0 1px 6px rgba(15, 36, 64, 0.05);
+}
+
+html { background: var(--color-paper); }
+body { color: var(--color-ink); font-family: var(--font-sans); -webkit-tap-highlight-color: transparent; }
+
+/* Display type: Archivo widened + heavy = quiet scoreboard character */
+.display {
+  font-variation-settings: "wdth" 118;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+.eyebrow {
+  font-variation-settings: "wdth" 122;
+  font-weight: 650;
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-mute);
+}
+
+/* Accessible focus everywhere */
+:focus-visible {
+  outline: 2px solid var(--color-navy);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* Shared primitives */
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  min-height: 2.75rem; padding: 0 1.1rem;
+  border-radius: 0.625rem; font-weight: 600; font-size: 0.9375rem;
+  border: 1px solid transparent; cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+.btn-primary { background: var(--color-navy); color: #fff; }
+.btn-primary:hover { background: var(--color-navy-soft); }
+.btn-secondary { background: #fff; color: var(--color-ink); border-color: var(--color-line); }
+.btn-secondary:hover { border-color: var(--color-navy); }
+.btn-danger { background: var(--color-danger); color: #fff; }
+.btn-accent { background: var(--color-accent); color: #fff; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.input, select.input, textarea.input {
+  width: 100%; min-height: 2.75rem; padding: 0.5rem 0.75rem;
+  background: #fff; border: 1px solid var(--color-line); border-radius: 0.625rem;
+  font-size: 1rem; color: var(--color-ink);
+}
+.input:focus { border-color: var(--color-navy); outline: none; box-shadow: 0 0 0 3px rgba(22, 56, 94, 0.12); }
+.label { display: block; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.3rem; }
+.hint { font-size: 0.8125rem; color: var(--color-mute); }
+.error-text { font-size: 0.8125rem; color: var(--color-danger); font-weight: 600; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.15rem 0.6rem; border-radius: 999px;
+  font-size: 0.75rem; font-weight: 650;
+  font-variation-settings: "wdth" 112;
+  border: 1px solid transparent;
+}
+.chip-ok { background: var(--color-ok-soft); color: var(--color-ok); }
+.chip-warn { background: var(--color-warn-soft); color: var(--color-warn); }
+.chip-danger { background: var(--color-danger-soft); color: var(--color-danger); }
+.chip-accent { background: var(--color-accent-soft); color: #9a4d12; }
+.chip-navy { background: var(--color-pool); color: var(--color-navy); }
+.chip-mute { background: #efece5; color: var(--color-mute); }
+.chip-brown { background: #f0e8e1; color: var(--color-brown); }
+
+table.data { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+table.data th {
+  text-align: left; padding: 0.55rem 0.75rem;
+  font-variation-settings: "wdth" 118; font-weight: 650; font-size: 0.72rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-mute);
+  border-bottom: 1px solid var(--color-line);
+}
+table.data td { padding: 0.65rem 0.75rem; border-bottom: 1px solid var(--color-line); vertical-align: top; }
+table.data tr:last-child td { border-bottom: none; }
