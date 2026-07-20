@@ -1,18 +1,14 @@
-/**
- * Napoleon Diving Club mark — vectorized from the supplied club logo.
- * Rendered inline so `currentColor` controls the ink (white on dark, ink on light).
- */
-export function Logo({ light = false, size = "md" }: { light?: boolean; size?: "sm" | "md" | "lg" }) {
-  const h = size === "lg" ? 72 : size === "sm" ? 30 : 44;
-  return (
-    <span
-      className={`inline-flex ${light ? "text-white" : "text-ink"}`}
-      role="img"
-      aria-label="Napoleon Diving Club"
-    >
-      <svg height={h} viewBox="0 0 265 189" fill="none" aria-hidden focusable="false" style={{ width: "auto" }}>
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+ width="265.000000pt" height="188.673875pt" viewBox="0 0 265.000000 188.673875"
+ preserveAspectRatio="xMidYMid meet">
+<metadata>
+Created by potrace 1.16, written by Peter Selinger 2001-2019
+</metadata>
 <g transform="translate(0.000000,188.673875) scale(0.100000,-0.100000)"
-fill="currentColor" stroke="none">
+fill="#000000" stroke="none">
 <path d="M1030 1880 c-99 -14 -165 -46 -214 -103 -126 -149 -129 -197 -24
 -318 124 -143 189 -226 194 -249 24 -106 42 -134 149 -231 65 -60 79 -82 77
 -126 -2 -37 25 -58 63 -49 13 3 52 -5 91 -19 106 -38 146 -27 83 24 -111 89
@@ -126,7 +122,4 @@ c-24 0 -25 -2 -25 -80 0 -52 -4 -80 -11 -80 -7 0 -10 26 -8 78 4 77 4 77 -22
 -17 -17 -15 0 -21 6 -21 21 0 25 33 22 38 -4z m2 -77 c0 -13 -7 -20 -20 -20
 -13 0 -20 7 -20 20 0 13 7 20 20 20 13 0 20 -7 20 -20z"/>
 </g>
-      </svg>
-    </span>
-  );
-}
+</svg>
