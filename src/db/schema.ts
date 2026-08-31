@@ -192,6 +192,9 @@ export const registrationSubmissions = pgTable("registration_submissions", {
   id: uuid("id").primaryKey().defaultRandom(),
   clubId: uuid("club_id").notNull().references(() => clubs.id),
   payload: jsonb("payload").notNull(), // immutable snapshot of the submitted form
+  // Set only if the family chose a portal password at submission time. Never
+  // the raw password — a bcrypt hash, applied to their login on approval.
+  passwordHash: text("password_hash"),
   status: submissionStatusEnum("status").notNull().default("pending"),
   reviewNotes: text("review_notes"),
   reviewerUserId: uuid("reviewer_user_id").references(() => users.id),

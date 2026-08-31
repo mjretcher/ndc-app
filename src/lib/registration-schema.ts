@@ -61,6 +61,13 @@ export const registrationSchema = z.object({
 
 export type RegistrationPayload = z.infer<typeof registrationSchema>;
 
+// Used only for validating the incoming API request, which includes a
+// portal password alongside the stored registration payload. The password
+// itself is never part of what gets saved as `payload` — see api/register.
+export const registrationSubmitSchema = registrationSchema.extend({
+  password: z.string().min(8, "Password must be at least 8 characters").max(72),
+});
+
 export function emptyDiver(): z.input<typeof diverSchema> {
   return {
     legalName: "", preferredName: "", birthDate: "", school: "", grade: "",

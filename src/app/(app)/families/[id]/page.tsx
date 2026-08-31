@@ -7,6 +7,8 @@ import { formatCents } from "@/lib/money";
 import { todayYMD } from "@/lib/dates";
 import { updateFamily, upsertGuardian, addDiscount, endDiscount } from "@/app/actions/families";
 import { addCredit, addManualCharge, recordPayment } from "@/app/actions/billing";
+import { createGuardianLogin, resetGuardianPassword, setGuardianLoginActive } from "@/app/actions/family-accounts";
+import { MergeFamilyForm } from "./MergeFamilyForm";
 
 export const metadata = { title: "Family" };
 
@@ -38,6 +40,30 @@ export default async function FamilyDetail({ params }: { params: Promise<{ id: s
   const discounts = await db.query.discountsAndAid.findMany({
     where: and(eq(tables.discountsAndAid.familyId, id), eq(tables.discountsAndAid.active, true)),
   });
+
+  // Portal login status per guardian (guardians and users are linked by email,
+  // not a foreign key, since a guardian can exist before ever getting a login).
+  const guardianEmails = family.guardians.map((g) => g.email?.toLowerCase().trim()).filter((e): e is string => !!e);
+  const loginUsers = guardianEmails.length
+    ? await db.query.users.findMany({ where: (u, { inArray }) => inArray(u.email, guardianEmails) })
+    : [];
+  const memberships = loginUsers.length
+    ? await db.query.clubMemberships.findMany({
+        where: and(eq(tables.clubMemberships.clubId, session.clubId), eq(tables.clubMemberships.familyId, id)),
+      })
+    : [];
+  const loginByEmail = new Map(loginUsers.map((u) => {
+    const m = memberships.find((mm) => mm.userId === u.id);
+    return [u.email, { userId: u.id, active: u.active && (m?.active ?? false) }];
+  }));
+
+  const otherFamilies = session.role === "owner_admin"
+    ? await db.query.families.findMany({
+        where: and(eq(tables.families.clubId, session.clubId), eq(tables.families.status, "active")),
+        orderBy: (f, { asc }) => [asc(f.billingName)],
+        limit: 300,
+      })
+    : [];
   const paymentsRows = await db.query.payments.findMany({
     where: eq(tables.payments.familyId, id),
     orderBy: [desc(tables.payments.receivedDate)],
@@ -63,6 +89,23 @@ export default async function FamilyDetail({ params }: { params: Promise<{ id: s
         </p>
       </header>
 
+      {session.role === "owner_admin" && family.status === "active" && otherFamilies.length > 0 && (
+        <details className="card p-4">
+          <summary className="text-sm font-semibold text-navy cursor-pointer">Merge a duplicate family into this one</summary>
+          <p className="hint mt-2">
+            Use this when a family shows up twice — e.g. a spreadsheet-backfilled record and a new
+            self-registration for the same family. Pick the duplicate below; everything (guardians, divers,
+            attendance history, charges, invoices, and any portal login) moves into <strong>{family.billingName}</strong>,
+            and the duplicate is marked merged rather than deleted.
+          </p>
+          <MergeFamilyForm
+            keepFamilyId={family.id}
+            keepFamilyName={family.billingName}
+            candidates={otherFamilies.filter((f) => f.id !== family.id)}
+          />
+        </details>
+      )}
+
       <section aria-labelledby="divers-h">
         <h2 id="divers-h" className="eyebrow mb-2">Divers</h2>
         <div className="grid gap-3 md:grid-cols-2">
@@ -84,17 +127,58 @@ export default async function FamilyDetail({ params }: { params: Promise<{ id: s
 
       <section aria-labelledby="guardians-h" className="card p-4">
         <h2 id="guardians-h" className="eyebrow mb-2">Guardians &amp; contacts</h2>
-        <ul className="space-y-1.5">
-          {family.guardians.map((g) => (
-            <li key={g.id} className="text-sm flex flex-wrap items-center gap-2">
-              <span className="font-semibold">{g.name}</span>
-              {g.relationship && <span className="text-mute">({g.relationship})</span>}
-              {g.email && <span>{g.email}</span>}
-              {g.phone && <span>{g.phone}</span>}
-              {g.isPrimary && <span className="chip chip-navy">Primary</span>}
-              {g.isEmergencyContact && <span className="chip chip-danger">Emergency</span>}
-            </li>
-          ))}
+        <ul className="space-y-2">
+          {family.guardians.map((g) => {
+            const email = g.email?.toLowerCase().trim();
+            const login = email ? loginByEmail.get(email) : undefined;
+            return (
+              <li key={g.id} className="text-sm border border-line rounded-lg p-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold">{g.name}</span>
+                  {g.relationship && <span className="text-mute">({g.relationship})</span>}
+                  {g.email && <span>{g.email}</span>}
+                  {g.phone && <span>{g.phone}</span>}
+                  {g.isPrimary && <span className="chip chip-navy">Primary</span>}
+                  {g.isEmergencyContact && <span className="chip chip-danger">Emergency</span>}
+                </div>
+                {session.role === "owner_admin" && (
+                  <div className="mt-2">
+                    {!g.email ? (
+                      <span className="text-xs text-mute">Add an email to enable portal access.</span>
+                    ) : !login ? (
+                      <form action={createGuardianLogin} className="flex flex-wrap items-center gap-2">
+                        <input type="hidden" name="guardianId" value={g.id} />
+                        <input name="password" type="password" required minLength={8} placeholder="Set initial password"
+                          className="input !w-48 !min-h-8 !py-1 text-xs" autoComplete="new-password" />
+                        <button className="btn btn-secondary !min-h-8 !py-1 text-xs">Create portal login</button>
+                      </form>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`chip ${login.active ? "chip-ok" : "chip-mute"}`}>
+                          Portal: {login.active ? "active" : "deactivated"}
+                        </span>
+                        <form action={resetGuardianPassword} className="flex items-center gap-1.5">
+                          <input type="hidden" name="userId" value={login.userId} />
+                          <input type="hidden" name="familyId" value={family.id} />
+                          <input name="password" type="password" required minLength={8} placeholder="New password"
+                            className="input !w-36 !min-h-8 !py-1 text-xs" autoComplete="new-password" />
+                          <button className="btn btn-secondary !min-h-8 !py-1 text-xs">Reset password</button>
+                        </form>
+                        <form action={setGuardianLoginActive}>
+                          <input type="hidden" name="userId" value={login.userId} />
+                          <input type="hidden" name="familyId" value={family.id} />
+                          <input type="hidden" name="active" value={login.active ? "false" : "true"} />
+                          <button className={`text-xs font-semibold ${login.active ? "text-danger" : "text-navy"}`}>
+                            {login.active ? "Deactivate access" : "Reactivate access"}
+                          </button>
+                        </form>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
         <details className="mt-3">
           <summary className="text-sm font-semibold text-navy cursor-pointer">Add a contact</summary>

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, tables } from "@/db";
-import { registrationSchema } from "@/lib/registration-schema";
+import { registrationSubmitSchema } from "@/lib/registration-schema";
 import { sendTemplatedEmail } from "@/lib/server/notify";
+import bcrypt from "bcryptjs";
 
 /**
  * Public endpoint. Simple in-memory fixed-window rate limit (per IP) plus a
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const parsed = registrationSchema.safeParse(body);
+  const parsed = registrationSubmitSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: "Some fields need attention.", issues: parsed.error.flatten() },
@@ -56,10 +57,15 @@ export async function POST(req: NextRequest) {
   const club = await db.query.clubs.findFirst();
   if (!club) return NextResponse.json({ ok: false, error: "Club is not configured yet." }, { status: 500 });
 
-  const payload = parsed.data;
+  // Split the password out: it's hashed immediately and stored in its own
+  // column, never as part of the stored payload snapshot.
+  const { password, ...payload } = parsed.data;
+  const passwordHash = await bcrypt.hash(password, 10);
+
   const [submission] = await db.insert(tables.registrationSubmissions).values({
     clubId: club.id,
     payload,
+    passwordHash,
     status: "pending",
   }).returning({ id: tables.registrationSubmissions.id });
 

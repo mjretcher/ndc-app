@@ -26,6 +26,7 @@ export function RegistrationForm() {
   const [divers, setDivers] = useState<DiverDraft[]>([emptyDiver()]);
   const [billingPreference, setBillingPreference] = useState<RegistrationPayload["billingPreference"]>("unsure");
   const [waiver, setWaiver] = useState({ acknowledgedRisk: false, acknowledgedPlacement: false, acknowledgedPrivacy: false, signatureName: "" });
+  const [account, setAccount] = useState({ password: "", confirmPassword: "" });
   const [errors, setErrors] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<string | null>(null);
@@ -54,6 +55,10 @@ export function RegistrationForm() {
     }
     if (i === 1) collect(registrationSchema.shape.divers.safeParse(divers));
     if (i === 3) collect(registrationSchema.shape.waiver.safeParse({ ...waiver, signatureDate: "2026-01-01" }));
+    if (i === 3) {
+      if (account.password.length < 8) problems.push("Password must be at least 8 characters");
+      if (account.password !== account.confirmPassword) problems.push("Passwords don't match");
+    }
     return [...new Set(problems)];
   }
 
@@ -76,7 +81,7 @@ export function RegistrationForm() {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, password: account.password }),
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
@@ -409,6 +414,23 @@ export function RegistrationForm() {
                 { flat_monthly: "Monthly flat rate", per_practice: "Pay per practice", high_school: "High school season", unsure: "Not sure yet" }[billingPreference]
               }</dd></div>
             </dl>
+          </section>
+          <section className="card p-4 md:p-5 space-y-3">
+            <h2 className="display text-lg">Create your family login</h2>
+            <p className="hint">
+              This lets you sign in later to sign up for practices and update RSVPs.
+              It becomes active once a coach approves your registration.
+            </p>
+            <div>
+              <label className="label" htmlFor="acct-pw">Password</label>
+              <input id="acct-pw" type="password" className="input" autoComplete="new-password"
+                value={account.password} onChange={(e) => setAccount({ ...account, password: e.target.value })} />
+            </div>
+            <div>
+              <label className="label" htmlFor="acct-pw2">Confirm password</label>
+              <input id="acct-pw2" type="password" className="input" autoComplete="new-password"
+                value={account.confirmPassword} onChange={(e) => setAccount({ ...account, confirmPassword: e.target.value })} />
+            </div>
           </section>
           <section className="card p-4 md:p-5 space-y-3">
             <h2 className="display text-lg">Acknowledgment &amp; signature</h2>

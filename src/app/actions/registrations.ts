@@ -121,6 +121,40 @@ export async function approveRegistration(formData: FormData) {
       });
     }
 
+    // Activate the family's portal login, if they set a password at submission.
+    if (submission.passwordHash) {
+      const primaryEmail = payload.guardians[0].email.toLowerCase().trim();
+      const existingUser = await tx.query.users.findFirst({ where: eq(tables.users.email, primaryEmail) });
+      if (!existingUser) {
+        const [newUser] = await tx.insert(tables.users).values({
+          email: primaryEmail,
+          name: payload.guardians[0].name,
+          passwordHash: submission.passwordHash,
+          active: true,
+        }).returning({ id: tables.users.id });
+        await tx.insert(tables.clubMemberships).values({
+          clubId: session.clubId,
+          userId: newUser.id,
+          role: "family",
+          familyId: family.id,
+          active: true,
+        });
+      } else {
+        // Email already has a login (e.g. an admin created one, or they
+        // registered before under another family). Don't overwrite an
+        // existing password or create a duplicate membership — just make
+        // sure this family is reachable from that login going forward.
+        const existingMembership = await tx.query.clubMemberships.findFirst({
+          where: and(eq(tables.clubMemberships.userId, existingUser.id), eq(tables.clubMemberships.clubId, session.clubId)),
+        });
+        if (!existingMembership) {
+          await tx.insert(tables.clubMemberships).values({
+            clubId: session.clubId, userId: existingUser.id, role: "family", familyId: family.id, active: true,
+          });
+        }
+      }
+    }
+
     await tx.update(tables.registrationSubmissions).set({
       status: "approved",
       reviewerUserId: session.userId,

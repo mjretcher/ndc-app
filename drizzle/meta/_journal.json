@@ -29,6 +29,13 @@
       "when": 1788204880104,
       "tag": "0003_add_signup_checked_at",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788216452140,
+      "tag": "0004_add_registration_password_hash",
+      "breakpoints": true
     }
   ]
 }

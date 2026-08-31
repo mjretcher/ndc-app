@@ -52,6 +52,37 @@ export default async function RegistrationDetail({ params }: { params: Promise<{
 
   const done = submission.status === "approved" || submission.status === "rejected";
 
+  // Possible-duplicate check: matching guardian email/phone, or a diver with
+  // the same legal name + birth date, against families already in the club.
+  // Informational only — approval always creates a new family; merging an
+  // existing match in afterward is a deliberate, separate step.
+  let possibleDuplicates: { id: string; billingName: string; reason: string }[] = [];
+  if (!done) {
+    const emails = p.guardians.map((g) => g.email.toLowerCase().trim());
+    const phones = p.guardians.map((g) => g.phone.replace(/\D/g, "")).filter(Boolean);
+    const clubFamilies = await db.query.families.findMany({
+      where: and(eq(tables.families.clubId, session.clubId)),
+      with: { guardians: true, divers: true },
+    });
+    const matches = new Map<string, string>();
+    for (const f of clubFamilies) {
+      for (const g of f.guardians) {
+        const gEmail = g.email?.toLowerCase().trim();
+        const gPhone = g.phone?.replace(/\D/g, "");
+        if (gEmail && emails.includes(gEmail)) matches.set(f.id, `guardian email ${gEmail} matches`);
+        else if (gPhone && phones.includes(gPhone)) matches.set(f.id, `guardian phone matches`);
+      }
+      for (const d of f.divers) {
+        const nameHit = p.divers.some((pd) =>
+          pd.birthDate === d.birthDate && pd.legalName.trim().toLowerCase() === d.legalName.trim().toLowerCase());
+        if (nameHit) matches.set(f.id, `diver ${d.legalName} (same name + birth date)`);
+      }
+    }
+    possibleDuplicates = clubFamilies
+      .filter((f) => matches.has(f.id))
+      .map((f) => ({ id: f.id, billingName: f.billingName, reason: matches.get(f.id)! }));
+  }
+
   return (
     <div className="space-y-5">
       <header>
@@ -79,6 +110,25 @@ export default async function RegistrationDetail({ params }: { params: Promise<{
           <p className="mt-2"><Link className="btn btn-secondary" href={`/families/${submission.resultingFamilyId}`}>Open family record →</Link></p>
         )}
       </header>
+
+      {possibleDuplicates.length > 0 && (
+        <section className="card p-4 border-warn bg-warn-soft">
+          <h2 className="font-semibold text-warn">This might already be a family in the system</h2>
+          <ul className="mt-2 text-sm space-y-1">
+            {possibleDuplicates.map((d) => (
+              <li key={d.id}>
+                <Link href={`/families/${d.id}`} className="font-semibold underline">{d.billingName}</Link>
+                {" — "}{d.reason}
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm mt-2">
+            You can still approve as a new family below — this just flags a possible match. If it turns
+            out to be the same family, open the resulting family record afterward and use{" "}
+            <strong>Merge a duplicate family</strong> to combine them.
+          </p>
+        </section>
+      )}
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="card p-4">

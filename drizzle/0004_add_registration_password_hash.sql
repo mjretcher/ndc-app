@@ -1,0 +1,1 @@
+ALTER TABLE "registration_submissions" ADD COLUMN "password_hash" text;
