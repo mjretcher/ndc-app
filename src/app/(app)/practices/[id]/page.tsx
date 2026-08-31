@@ -22,6 +22,14 @@ export default async function PracticeDetail({ params }: { params: Promise<{ id:
   });
   if (!practice) notFound();
 
+  const rsvps = practice.requiresSignup
+    ? await db.query.practiceRsvps.findMany({
+        where: eq(tables.practiceRsvps.practiceId, practice.id),
+        with: { diver: true },
+      })
+    : [];
+  const attendingCount = rsvps.filter((r) => r.status === "attending").length;
+
   const groupIds = (practice.eligibleGroupIds as string[]) ?? [];
   const groups = await db.query.groups.findMany({ where: eq(tables.groups.clubId, session.clubId) });
   const eligibleGroups = groupIds.length === 0 ? groups : groups.filter((g) => groupIds.includes(g.id));
@@ -89,6 +97,43 @@ export default async function PracticeDetail({ params }: { params: Promise<{ id:
         {practice.publicDescription && <p className="text-sm mt-2">{practice.publicDescription}</p>}
         {practice.internalNotes && <p className="text-sm mt-2 text-mute">Internal: {practice.internalNotes}</p>}
       </section>
+
+      {practice.requiresSignup && (
+        <section className="card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="eyebrow">Sign-ups</h2>
+            <span className={`chip ${attendingCount >= (practice.minSignupCount ?? 0) ? "chip-ok" : "chip-warn"}`}>
+              {attendingCount} attending{practice.minSignupCount ? ` / needs ${practice.minSignupCount}` : ""}
+            </span>
+          </div>
+          {practice.status === "scheduled" && practice.minSignupCount != null && (
+            <p className="text-xs text-mute mb-2">
+              Auto-cancels {practice.signupCutoffHours ?? 24}h before start if fewer than {practice.minSignupCount} are attending.
+            </p>
+          )}
+          {practice.status === "canceled" && practice.autoCanceledAt && (
+            <p className="text-xs text-mute mb-2">This practice was auto-canceled for low sign-up.</p>
+          )}
+          {rsvps.length === 0 ? (
+            <p className="text-sm text-mute">No responses yet.</p>
+          ) : (
+            <ul className="text-sm space-y-1">
+              {rsvps
+                .sort((a, b) => (a.diver.legalName < b.diver.legalName ? -1 : 1))
+                .map((r) => (
+                  <li key={r.id} className="flex items-center gap-2">
+                    <Link href={`/divers/${r.diverId}`} className="font-semibold text-navy hover:underline">
+                      {r.diver.preferredName || r.diver.legalName}
+                    </Link>
+                    <span className={`chip ${r.status === "attending" ? "chip-ok" : "chip-mute"}`}>
+                      {r.status === "attending" ? "Attending" : "Can't make it"}
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {practice.attendance.length > 0 && (
         <section className="card p-4">

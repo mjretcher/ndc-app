@@ -15,6 +15,20 @@
       "when": 1784519390789,
       "tag": "0001_needs_attention",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788198069434,
+      "tag": "0002_add_family_portal_and_signup",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788204880104,
+      "tag": "0003_add_signup_checked_at",
+      "breakpoints": true
     }
   ]
 }

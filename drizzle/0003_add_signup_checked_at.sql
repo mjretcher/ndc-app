@@ -1,0 +1,1 @@
+ALTER TABLE "practices" ADD COLUMN "signup_checked_at" timestamp with time zone;

@@ -76,6 +76,8 @@ export const clubMemberships = pgTable("club_memberships", {
   clubId: uuid("club_id").notNull().references(() => clubs.id),
   userId: uuid("user_id").notNull().references(() => users.id),
   role: roleEnum("role").notNull().default("coach"),
+  // Set only when role = "family": scopes a guardian's login to one family.
+  familyId: uuid("family_id").references(() => families.id),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("club_membership_unique").on(t.clubId, t.userId)]);
@@ -289,6 +291,9 @@ export const practiceSeries = pgTable("practice_series", {
   eligibleGroupIds: jsonb("eligible_group_ids").notNull().default([]),
   defaultCoachIds: jsonb("default_coach_ids").notNull().default([]),
   notes: text("notes"),
+  requiresSignup: boolean("requires_signup").notNull().default(false),
+  minSignupCount: integer("min_signup_count"),
+  signupCutoffHours: integer("signup_cutoff_hours"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -307,6 +312,12 @@ export const practices = pgTable("practices", {
   publicDescription: text("public_description"),
   internalNotes: text("internal_notes"),
   status: practiceStatusEnum("status").notNull().default("scheduled"),
+  // Sign-up-required practices: families must RSVP; auto-canceled if under threshold.
+  requiresSignup: boolean("requires_signup").notNull().default(false),
+  minSignupCount: integer("min_signup_count"),
+  signupCutoffHours: integer("signup_cutoff_hours"),
+  autoCanceledAt: timestamp("auto_canceled_at", { withTimezone: true }),
+  signupCheckedAt: timestamp("signup_checked_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("practices_date_idx").on(t.clubId, t.practiceDate), index("practices_series_idx").on(t.seriesId)]);
 
@@ -340,14 +351,16 @@ export const attendanceChangeLog = pgTable("attendance_change_log", {
   changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Reserved for post-MVP family RSVP. Not surfaced in any MVP UI.
+// Family self-service practice sign-up (portal). One row per diver per practice.
 export const practiceRsvps = pgTable("practice_rsvps", {
   id: uuid("id").primaryKey().defaultRandom(),
   practiceId: uuid("practice_id").notNull().references(() => practices.id),
   diverId: uuid("diver_id").notNull().references(() => divers.id),
   status: rsvpStatusEnum("status").notNull(),
   waitlistOrder: integer("waitlist_order"),
+  respondedByUserId: uuid("responded_by_user_id").references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("rsvp_unique").on(t.practiceId, t.diverId)]);
 
 // ---------------------------------------------------------------------------
@@ -565,4 +578,9 @@ export const invoiceLinesRelations = relations(invoiceLines, ({ one }) => ({
 export const clubMembershipsRelations = relations(clubMemberships, ({ one }) => ({
   user: one(users, { fields: [clubMemberships.userId], references: [users.id] }),
   club: one(clubs, { fields: [clubMemberships.clubId], references: [clubs.id] }),
+  family: one(families, { fields: [clubMemberships.familyId], references: [families.id] }),
+}));
+export const practiceRsvpsRelations = relations(practiceRsvps, ({ one }) => ({
+  practice: one(practices, { fields: [practiceRsvps.practiceId], references: [practices.id] }),
+  diver: one(divers, { fields: [practiceRsvps.diverId], references: [divers.id] }),
 }));

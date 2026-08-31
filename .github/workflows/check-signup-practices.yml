@@ -1,0 +1,19 @@
+name: Check sign-up practice cutoffs
+
+on:
+  schedule:
+    # Runs at the top of every hour (UTC). Vercel's own Cron feature is
+    # limited to once/day on the Hobby plan, so this workflow does the
+    # scheduling instead and simply calls the app's API route.
+    - cron: "0 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call check-signup-practices endpoint
+        run: |
+          curl -sf -X GET "https://ndc-zeta.vercel.app/api/cron/check-signup-practices" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -w "\nHTTP %{http_code}\n"

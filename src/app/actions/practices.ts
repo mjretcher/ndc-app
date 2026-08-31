@@ -232,7 +232,7 @@ export async function restorePractice(formData: FormData) {
 }
 
 /** Email primary guardians of divers in the practice's eligible groups. */
-async function notifyPracticeFamilies(clubId: string, practiceId: string, eventType: string, changeSummary: string) {
+export async function notifyPracticeFamilies(clubId: string, practiceId: string, eventType: string, changeSummary: string) {
   const practice = await db.query.practices.findFirst({
     where: eq(tables.practices.id, practiceId),
     with: { facility: true },
