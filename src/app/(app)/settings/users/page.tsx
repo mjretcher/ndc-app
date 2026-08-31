@@ -2,6 +2,7 @@ import { db, tables } from "@/db";
 import { eq } from "drizzle-orm";
 import { requireAdmin } from "@/lib/server/session";
 import { upsertCoach, deactivateCoach } from "@/app/actions/settings";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export const metadata = { title: "Coaches" };
 
@@ -34,7 +35,7 @@ export default async function UsersSettingsPage() {
                   <input type="checkbox" name="active" defaultChecked={m.user.active} disabled={m.userId === session.userId} /> Active
                 </label>
                 <button className="btn btn-secondary !min-h-9">Save</button>
-                <input name="password" type="password" placeholder="Set new password (leave blank to keep)" className="input md:col-span-3" aria-label="New password" autoComplete="new-password" />
+                <PasswordInput name="password" placeholder="Set new password (leave blank to keep)" wrapperClassName="md:col-span-3" aria-label="New password" autoComplete="new-password" />
                 <div className="md:col-span-2 flex justify-end">
                   {m.userId !== session.userId && m.user.active && (
                     <button formAction={deactivateCoach} className="text-sm text-danger font-semibold">Deactivate account</button>
@@ -59,7 +60,7 @@ export default async function UsersSettingsPage() {
             <option value="coach">Coach</option>
             <option value="owner_admin">Owner / admin</option>
           </select>
-          <input name="password" required type="password" placeholder="Initial password" className="input" aria-label="Initial password" autoComplete="new-password" />
+          <PasswordInput name="password" required placeholder="Initial password" aria-label="Initial password" autoComplete="new-password" />
           <button className="btn btn-primary md:col-span-2">Add coach</button>
         </form>
       </section>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export function PortalSignInForm() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export function PortalSignInForm() {
       </div>
       <div>
         <label className="label" htmlFor="password">Password</label>
-        <input className="input" id="password" name="password" type="password" autoComplete="current-password" required />
+        <PasswordInput id="password" name="password" autoComplete="current-password" required />
       </div>
       {error && <p role="alert" className="error-text">{error}</p>}
       <button className="btn btn-primary w-full" disabled={busy}>

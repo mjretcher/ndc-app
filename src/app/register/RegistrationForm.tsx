@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   registrationSchema, emptyDiver, type RegistrationPayload,
 } from "@/lib/registration-schema";
+import { PasswordInput } from "@/components/PasswordInput";
 
 type DiverDraft = ReturnType<typeof emptyDiver>;
 type GuardianDraft = {
@@ -423,12 +424,12 @@ export function RegistrationForm() {
             </p>
             <div>
               <label className="label" htmlFor="acct-pw">Password</label>
-              <input id="acct-pw" type="password" className="input" autoComplete="new-password"
+              <PasswordInput id="acct-pw" autoComplete="new-password"
                 value={account.password} onChange={(e) => setAccount({ ...account, password: e.target.value })} />
             </div>
             <div>
               <label className="label" htmlFor="acct-pw2">Confirm password</label>
-              <input id="acct-pw2" type="password" className="input" autoComplete="new-password"
+              <PasswordInput id="acct-pw2" autoComplete="new-password"
                 value={account.confirmPassword} onChange={(e) => setAccount({ ...account, confirmPassword: e.target.value })} />
             </div>
           </section>

@@ -9,6 +9,7 @@ import { updateFamily, upsertGuardian, addDiscount, endDiscount } from "@/app/ac
 import { addCredit, addManualCharge, recordPayment } from "@/app/actions/billing";
 import { createGuardianLogin, resetGuardianPassword, setGuardianLoginActive } from "@/app/actions/family-accounts";
 import { MergeFamilyForm } from "./MergeFamilyForm";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export const metadata = { title: "Family" };
 
@@ -148,8 +149,8 @@ export default async function FamilyDetail({ params }: { params: Promise<{ id: s
                     ) : !login ? (
                       <form action={createGuardianLogin} className="flex flex-wrap items-center gap-2">
                         <input type="hidden" name="guardianId" value={g.id} />
-                        <input name="password" type="password" required minLength={8} placeholder="Set initial password"
-                          className="input !w-48 !min-h-8 !py-1 text-xs" autoComplete="new-password" />
+                        <PasswordInput name="password" required minLength={8} placeholder="Set initial password"
+                          wrapperClassName="!w-48" className="input !min-h-8 !py-1 text-xs" autoComplete="new-password" />
                         <button className="btn btn-secondary !min-h-8 !py-1 text-xs">Create portal login</button>
                       </form>
                     ) : (
@@ -160,8 +161,8 @@ export default async function FamilyDetail({ params }: { params: Promise<{ id: s
                         <form action={resetGuardianPassword} className="flex items-center gap-1.5">
                           <input type="hidden" name="userId" value={login.userId} />
                           <input type="hidden" name="familyId" value={family.id} />
-                          <input name="password" type="password" required minLength={8} placeholder="New password"
-                            className="input !w-36 !min-h-8 !py-1 text-xs" autoComplete="new-password" />
+                          <PasswordInput name="password" required minLength={8} placeholder="New password"
+                            wrapperClassName="!w-36" className="input !min-h-8 !py-1 text-xs" autoComplete="new-password" />
                           <button className="btn btn-secondary !min-h-8 !py-1 text-xs">Reset password</button>
                         </form>
                         <form action={setGuardianLoginActive}>
