@@ -6,8 +6,15 @@ import { and, eq, lt } from "drizzle-orm";
  * Email notification service.
  * - Templates are stored in the database and editable in the app.
  * - Every send goes through notification_jobs (send log + retry + idempotency).
- * - The delivery driver is selected by env: RESEND_API_KEY set -> Resend,
- *   otherwise a log driver so development never emails real people.
+ * - Delivery driver, in priority order:
+ *     1. Resend (RESEND_API_KEY set) — the intended long-term path, once a
+ *        custom domain is verified with Resend for proper branded sending.
+ *     2. Gmail SMTP relay (GMAIL_USER + GMAIL_APP_PASSWORD set) — a stopgap
+ *        that sends real email through a Gmail account today, no domain
+ *        needed. Mail reads as coming from that Gmail address.
+ *     3. Neither configured -> log-only. Nothing is sent to a real inbox.
+ *   Once Resend is configured, it's used automatically even if the Gmail
+ *   vars are still set — no code change needed to "switch over" later.
  * - Never include medical details in any merge field. Templates only receive
  *   the whitelisted fields passed here.
  */
@@ -18,16 +25,19 @@ export function renderTemplate(text: string, fields: MergeFields): string {
   return text.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key: string) => fields[key] ?? "");
 }
 
-async function deliver(job: { recipientEmail: string; subject: string; body: string }): Promise<{ ok: boolean; skipped?: boolean; providerId?: string; error?: string }> {
-  const apiKey = process.env.RESEND_API_KEY;
+export function isEmailConfigured(): boolean {
+  return !!process.env.RESEND_API_KEY || !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
+}
+
+/** Human-readable label for whichever driver is currently active, for display in Settings. */
+export function activeEmailProviderLabel(): string | null {
+  if (process.env.RESEND_API_KEY) return `Resend (from ${process.env.EMAIL_FROM ?? "onboarding@resend.dev"})`;
+  if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) return `Gmail relay (from ${process.env.GMAIL_USER})`;
+  return null;
+}
+
+async function deliverViaResend(apiKey: string, job: { recipientEmail: string; subject: string; body: string }) {
   const from = process.env.EMAIL_FROM ?? "Napoleon Diving Club <onboarding@resend.dev>";
-  if (!apiKey) {
-    // No email provider configured yet. This is NOT a successful send — nothing
-    // leaves the server. Callers must record this as "skipped", not "sent", or
-    // the notification log will falsely claim delivery that never happened.
-    console.log(`[email:no-provider-configured] would have sent to=${job.recipientEmail} subject="${job.subject}"`);
-    return { ok: false, skipped: true, providerId: undefined };
-  }
   try {
     const { Resend } = await import("resend");
     const resend = new Resend(apiKey);
@@ -39,6 +49,40 @@ async function deliver(job: { recipientEmail: string; subject: string; body: str
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
+}
+
+async function deliverViaGmail(user: string, appPassword: string, job: { recipientEmail: string; subject: string; body: string }) {
+  try {
+    const nodemailer = await import("nodemailer");
+    const transporter = nodemailer.default.createTransport({
+      service: "gmail",
+      auth: { user, pass: appPassword },
+    });
+    const info = await transporter.sendMail({
+      from: `"Napoleon Diving Club" <${user}>`,
+      to: job.recipientEmail,
+      subject: job.subject,
+      text: job.body,
+    });
+    return { ok: true, providerId: info.messageId };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+async function deliver(job: { recipientEmail: string; subject: string; body: string }): Promise<{ ok: boolean; skipped?: boolean; providerId?: string; error?: string }> {
+  const resendKey = process.env.RESEND_API_KEY;
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD;
+
+  if (resendKey) return deliverViaResend(resendKey, job);
+  if (gmailUser && gmailPass) return deliverViaGmail(gmailUser, gmailPass, job);
+
+  // No email provider configured yet. This is NOT a successful send — nothing
+  // leaves the server. Callers must record this as "skipped", not "sent", or
+  // the notification log will falsely claim delivery that never happened.
+  console.log(`[email:no-provider-configured] would have sent to=${job.recipientEmail} subject="${job.subject}"`);
+  return { ok: false, skipped: true };
 }
 
 /**
@@ -85,7 +129,7 @@ export async function sendTemplatedEmail(opts: {
     status: result.skipped ? "skipped" : result.ok ? "sent" : "failed",
     attempts: 1,
     providerId: result.providerId ?? null,
-    lastError: result.skipped ? "No email provider configured (RESEND_API_KEY not set)" : (result.error ?? null),
+    lastError: result.skipped ? "No email provider configured" : (result.error ?? null),
     sentAt: result.ok ? new Date() : null,
   }).where(eq(tables.notificationJobs.id, jobId));
 }
@@ -106,7 +150,7 @@ export async function retryFailedJobs(clubId: string, maxAttempts = 3): Promise<
       status: result.skipped ? "skipped" : result.ok ? "sent" : "failed",
       attempts: job.attempts + 1,
       providerId: result.providerId ?? job.providerId,
-      lastError: result.skipped ? "No email provider configured (RESEND_API_KEY not set)" : (result.error ?? null),
+      lastError: result.skipped ? "No email provider configured" : (result.error ?? null),
       sentAt: result.ok ? new Date() : null,
     }).where(eq(tables.notificationJobs.id, job.id));
     if (result.ok) retried++;

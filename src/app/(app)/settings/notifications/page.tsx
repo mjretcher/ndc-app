@@ -2,6 +2,7 @@ import { db, tables } from "@/db";
 import { eq, desc, asc } from "drizzle-orm";
 import { requireAdmin } from "@/lib/server/session";
 import { updateTemplate, retryNotifications } from "@/app/actions/settings";
+import { isEmailConfigured, activeEmailProviderLabel } from "@/lib/server/notify";
 
 export const metadata = { title: "Notifications" };
 
@@ -29,7 +30,8 @@ export default async function NotificationsSettingsPage() {
   });
   const failed = jobs.filter((j) => j.status === "failed").length;
   const skipped = jobs.filter((j) => j.status === "skipped").length;
-  const emailConfigured = !!process.env.RESEND_API_KEY;
+  const emailConfigured = isEmailConfigured();
+  const providerLabel = activeEmailProviderLabel();
 
   return (
     <div className="space-y-6">
@@ -40,6 +42,14 @@ export default async function NotificationsSettingsPage() {
             Every email below — registration confirmations, membership reminders, invoice notices,
             practice cancellations — is being <strong>logged but not actually sent</strong>. Nothing has
             gone out to a real inbox. Connect an email provider to start sending for real.
+          </p>
+        </section>
+      )}
+      {emailConfigured && (
+        <section className="card p-4 border-ok bg-ok-soft">
+          <p className="text-sm">
+            <span className="chip chip-ok">Connected</span>{" "}
+            Sending live via <strong>{providerLabel}</strong>.
           </p>
         </section>
       )}
