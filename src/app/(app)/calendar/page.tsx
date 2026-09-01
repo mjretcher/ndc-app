@@ -4,6 +4,7 @@ import { and, eq, gte, lte, asc } from "drizzle-orm";
 import { requireCoach } from "@/lib/server/session";
 import { todayYMD, monthLabel, formatLocalTime, ymdDayOfWeek, addDaysYMD, type YMD } from "@/lib/dates";
 import { categoryColorClass, categoryDotClass, CATEGORY_LEGEND } from "@/lib/practice-category-style";
+import { loadAvailabilityMaps, resolveAvailability } from "@/lib/server/coach-availability";
 
 export const metadata = { title: "Calendar" };
 
@@ -29,7 +30,17 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     with: { facility: true, coaches: true },
     orderBy: [asc(tables.practices.startsAt)],
   });
+  const allCoachUserIds = [...new Set(practices.flatMap((p) => p.coaches.map((c) => c.userId)))];
+  const availabilityMaps = await loadAvailabilityMaps(allCoachUserIds);
+
+  function hasConflict(p: (typeof practices)[number]): boolean {
+    if (p.status === "canceled") return false;
+    const weekday = ymdDayOfWeek(p.practiceDate as YMD);
+    return p.coaches.some((c) => !resolveAvailability(c.userId, p.practiceDate as YMD, weekday, availabilityMaps));
+  }
+
   const uncoveredCount = practices.filter((p) => p.status !== "canceled" && p.coaches.length === 0).length;
+  const conflictCount = practices.filter((p) => hasConflict(p)).length;
 
   const byDate = new Map<string, typeof practices>();
   for (const p of practices) {
@@ -66,10 +77,19 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         </div>
       </header>
 
-      {uncoveredCount > 0 && (
-        <p className="text-sm px-3 py-2 rounded-lg bg-warn-soft text-warn font-semibold">
-          ⚠ {uncoveredCount} practice{uncoveredCount === 1 ? "" : "s"} this month {uncoveredCount === 1 ? "has" : "have"} no coach assigned — look for the red dot below.
-        </p>
+      {(uncoveredCount > 0 || conflictCount > 0) && (
+        <div className="space-y-1">
+          {uncoveredCount > 0 && (
+            <p className="text-sm px-3 py-2 rounded-lg bg-warn-soft text-warn font-semibold">
+              ⚠ {uncoveredCount} practice{uncoveredCount === 1 ? "" : "s"} this month {uncoveredCount === 1 ? "has" : "have"} no coach assigned — look for the red dot below.
+            </p>
+          )}
+          {conflictCount > 0 && (
+            <p className="text-sm px-3 py-2 rounded-lg bg-accent-soft text-accent font-semibold">
+              ⚠ {conflictCount} practice{conflictCount === 1 ? "" : "s"} {conflictCount === 1 ? "has" : "have"} a coach assigned who flagged themselves unavailable that day — look for the orange dot below.
+            </p>
+          )}
+        </div>
       )}
 
       <div className="flex flex-wrap gap-3 text-xs">
@@ -80,6 +100,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         ))}
         <span className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-full inline-block bg-danger" /> No coach assigned
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-full inline-block bg-accent" /> Assigned coach unavailable
         </span>
       </div>
 
@@ -100,6 +123,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                         className={`relative block rounded px-1.5 py-0.5 text-[0.68rem] font-semibold leading-tight truncate ${catColor(p.category, p.status)}`}>
                         {p.status !== "canceled" && p.coaches.length === 0 && (
                           <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-danger ring-1 ring-white" title="No coach assigned" />
+                        )}
+                        {p.status !== "canceled" && p.coaches.length > 0 && hasConflict(p) && (
+                          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-accent ring-1 ring-white" title="Assigned coach unavailable" />
                         )}
                         {formatLocalTime(p.startsAt)} {p.title}
                       </Link>
@@ -131,6 +157,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                     {p.facility ? ` · ${p.facility.name}` : ""}
                     {p.status !== "canceled" && p.coaches.length === 0 && (
                       <span className="chip chip-danger ml-1.5 !py-0">No coach</span>
+                    )}
+                    {p.status !== "canceled" && p.coaches.length > 0 && hasConflict(p) && (
+                      <span className="chip chip-warn ml-1.5 !py-0">Coach unavailable</span>
                     )}
                   </span>
                 </Link>

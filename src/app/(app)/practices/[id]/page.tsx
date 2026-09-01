@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 import { db, tables } from "@/db";
 import { and, eq } from "drizzle-orm";
 import { requireCoach } from "@/lib/server/session";
-import { formatLocalDate, formatLocalTime, type YMD } from "@/lib/dates";
+import { formatLocalDate, formatLocalTime, ymdDayOfWeek, type YMD } from "@/lib/dates";
 import { restorePractice } from "@/app/actions/practices";
 import { formatCents } from "@/lib/money";
+import { loadAvailabilityMaps, resolveAvailability } from "@/lib/server/coach-availability";
 
 export const metadata = { title: "Practice" };
 
@@ -38,6 +39,11 @@ export default async function PracticeDetail({ params }: { params: Promise<{ id:
     where: eq(tables.practiceCoaches.practiceId, practice.id),
     with: { user: true },
   });
+  const availabilityMaps = await loadAvailabilityMaps(assignedCoaches.map((a) => a.userId));
+  const practiceWeekday = ymdDayOfWeek(practice.practiceDate as YMD);
+  const unavailableCoaches = assignedCoaches.filter(
+    (a) => !resolveAvailability(a.userId, practice.practiceDate as YMD, practiceWeekday, availabilityMaps),
+  );
 
   const charges = await db.query.charges.findMany({
     where: and(eq(tables.charges.clubId, session.clubId), eq(tables.charges.serviceDate, practice.practiceDate)),
@@ -108,11 +114,22 @@ export default async function PracticeDetail({ params }: { params: Promise<{ id:
               <span className="chip chip-danger">No coach assigned</span>
             )
           ) : (
-            assignedCoaches.map((a) => (
-              <span key={a.id} className="chip chip-navy">{a.user.name}</span>
-            ))
+            assignedCoaches.map((a) => {
+              const isUnavailable = unavailableCoaches.some((u) => u.userId === a.userId);
+              return (
+                <span key={a.id} className={`chip ${isUnavailable ? "chip-warn" : "chip-navy"}`}>
+                  {a.user.name}{isUnavailable ? " ⚠ marked unavailable" : ""}
+                </span>
+              );
+            })
           )}
         </p>
+        {unavailableCoaches.length > 0 && practice.status !== "canceled" && (
+          <p className="text-sm mt-1 text-warn">
+            {unavailableCoaches.map((u) => u.user.name).join(", ")} {unavailableCoaches.length === 1 ? "has" : "have"}{" "}
+            flagged themselves unavailable this day — double check coverage.
+          </p>
+        )}
         {practice.publicDescription && <p className="text-sm mt-2">{practice.publicDescription}</p>}
         {practice.internalNotes && <p className="text-sm mt-2 text-mute">Internal: {practice.internalNotes}</p>}
       </section>

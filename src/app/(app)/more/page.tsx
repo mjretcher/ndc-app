@@ -8,6 +8,7 @@ export default async function MorePage() {
   const items = [
     { href: "/divers", label: "Divers", desc: "Roster, groups, plans" },
     { href: "/memberships", label: "Memberships", desc: "AAU & USA Diving tracker" },
+    { href: "/availability", label: "My availability", desc: "Weekly pattern & time off" },
     { href: "/registrations", label: "Registrations", desc: "Review queue" },
     { href: "/reports", label: "Reports", desc: "CSV exports" },
     ...(session.role === "owner_admin" ? [

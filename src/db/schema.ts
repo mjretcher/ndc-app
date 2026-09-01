@@ -330,6 +330,28 @@ export const practiceCoaches = pgTable("practice_coaches", {
   userId: uuid("user_id").notNull().references(() => users.id),
 }, (t) => [uniqueIndex("practice_coach_unique").on(t.practiceId, t.userId)]);
 
+// Recurring weekly pattern: does this coach generally coach on this weekday?
+// Absence of a row for a given weekday means "no preference set" — treated as
+// available, so a coach who never opens this page is never falsely flagged.
+export const coachWeeklyAvailability = pgTable("coach_weekly_availability", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  weekday: integer("weekday").notNull(), // 0=Sun..6=Sat
+  available: boolean("available").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("coach_weekly_avail_unique").on(t.userId, t.weekday)]);
+
+// One-off overrides for a specific date — can mark unavailable on an
+// otherwise-available weekday, or available on an otherwise-unavailable one.
+export const coachAvailabilityExceptions = pgTable("coach_availability_exceptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  date: date("date").notNull(),
+  available: boolean("available").notNull(),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("coach_availability_exception_unique").on(t.userId, t.date)]);
+
 export const attendanceRecords = pgTable("attendance_records", {
   id: uuid("id").primaryKey().defaultRandom(),
   practiceId: uuid("practice_id").notNull().references(() => practices.id),
@@ -552,6 +574,12 @@ export const practicesRelations = relations(practices, ({ one, many }) => ({
 export const practiceCoachesRelations = relations(practiceCoaches, ({ one }) => ({
   practice: one(practices, { fields: [practiceCoaches.practiceId], references: [practices.id] }),
   user: one(users, { fields: [practiceCoaches.userId], references: [users.id] }),
+}));
+export const coachWeeklyAvailabilityRelations = relations(coachWeeklyAvailability, ({ one }) => ({
+  user: one(users, { fields: [coachWeeklyAvailability.userId], references: [users.id] }),
+}));
+export const coachAvailabilityExceptionsRelations = relations(coachAvailabilityExceptions, ({ one }) => ({
+  user: one(users, { fields: [coachAvailabilityExceptions.userId], references: [users.id] }),
 }));
 export const attendanceRelations = relations(attendanceRecords, ({ one }) => ({
   practice: one(practices, { fields: [attendanceRecords.practiceId], references: [practices.id] }),

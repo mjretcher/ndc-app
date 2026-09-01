@@ -15,6 +15,7 @@ const secondary = (role: Role) => [
   { href: "/registrations", label: "Registrations" },
   { href: "/families", label: "Families" },
   { href: "/memberships", label: "Memberships" },
+  { href: "/availability", label: "My availability" },
   { href: "/reports", label: "Reports" },
   ...(role === "owner_admin"
     ? [
