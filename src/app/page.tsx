@@ -3,13 +3,13 @@ import { Logo } from "@/components/Logo";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Napoleon Diving Club | Youth Competitive Diving in Napoleon, Ohio",
+  title: "Napoleon Diving Club | Youth Competitive Diving in Bowling Green, Ohio",
   description:
-    "Napoleon Diving Club coaches competitive divers in Northwest Ohio, from a first dive through OHSAA state qualification, AAU/USA national qualification, and on to college diving. Led by Mike Retcher, BGSU's Head Diving Coach.",
+    "Napoleon Diving Club coaches competitive divers out of Bowling Green State University, from a first dive through OHSAA state qualification, AAU/USA national qualification, and on to college diving. Led by Mike Retcher, BGSU's Head Diving Coach.",
   openGraph: {
     title: "Napoleon Diving Club",
     description:
-      "Eighteen years turning first jumps into college rosters — competitive youth diving in Napoleon, Ohio.",
+      "From a first cannonball to a college roster — competitive youth diving out of Bowling Green, Ohio.",
     url: "https://napoleondivingclub.com",
     siteName: "Napoleon Diving Club",
     type: "website",
@@ -22,7 +22,7 @@ const jsonLd = {
   name: "Napoleon Diving Club",
   alternateName: "NDC",
   description:
-    "A competitive youth diving club in Napoleon, Ohio, training divers from beginner lessons through OHSAA state, AAU, and USA Diving national qualification, with a track record of sending athletes to Division 1, 2, and 3 college diving programs.",
+    "A competitive youth diving club training out of Bowling Green State University in Northwest Ohio, from beginner lessons through OHSAA state, AAU, and USA Diving national qualification, with a track record of sending athletes to Division 1, 2, and 3 college diving programs. Founded in Napoleon, Ohio, where Napoleon High School still hosts its High School Only program.",
   url: "https://napoleondivingclub.com",
   sport: "Diving",
   areaServed: {
@@ -73,13 +73,14 @@ export default function HomePage() {
       <section className="mx-auto max-w-6xl px-5 md:px-10">
         <div className="grid md:grid-cols-[1.05fr_0.95fr] rounded-3xl overflow-hidden">
           <div className="py-8 md:py-14 pr-0 md:pr-10 flex flex-col justify-center">
-            <p className="font-serif text-teal text-lg mb-1.5">Napoleon, Ohio &middot; competitive youth diving</p>
-            <h1 className="font-serif font-semibold text-4xl md:text-5xl leading-[1.05] max-w-[10ch] mb-5">
-              Eighteen years turning first jumps into college rosters.
+            <p className="font-serif text-teal text-lg mb-1.5">Bowling Green, Ohio &middot; competitive youth diving</p>
+            <h1 className="font-serif font-semibold text-4xl md:text-5xl leading-[1.05] max-w-[11ch] mb-5">
+              From a first cannonball to a college roster.
             </h1>
             <p className="text-lg text-mute leading-relaxed max-w-[46ch] mb-8">
-              A real path from your kid&rsquo;s first practice to OHSAA state finals, national qualification, and
-              diving in college &mdash; coached by a staff that includes an active NCAA Division I head coach.
+              A real path for every diver &mdash; from a first practice to OHSAA state finals, national
+              qualification, and diving in college &mdash; coached by a staff that includes an active NCAA
+              Division I head coach.
             </p>
             <div className="flex items-center gap-6 flex-wrap">
               <Link href="/register" className="btn btn-primary !min-h-12 !px-7 text-base">Book a free trial practice</Link>
@@ -91,15 +92,16 @@ export default function HomePage() {
               className="absolute inset-0"
               style={{
                 background:
-                  "linear-gradient(160deg, rgba(15,36,64,0.9), rgba(15,92,102,0.55)), radial-gradient(circle at 70% 30%, rgba(217,111,34,0.25), transparent 55%)",
+                  "linear-gradient(160deg, rgba(15,36,64,0.95), rgba(15,92,102,0.6))",
               }}
             />
-            <svg viewBox="0 0 600 560" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 w-full h-full">
-              <path d="M 60 90 C 260 60, 480 160, 430 340 C 400 440, 330 480, 300 520" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2.5" strokeDasharray="4 8" />
-              <circle cx="60" cy="90" r="6" fill="#d96f22" />
-              <circle cx="300" cy="520" r="14" fill="none" stroke="#d96f22" strokeWidth="2.5" />
-              <circle cx="300" cy="520" r="24" fill="none" stroke="#d96f22" strokeWidth="1.2" opacity="0.5" />
-            </svg>
+            <span
+              aria-hidden
+              className="font-serif font-semibold absolute -right-10 -bottom-16 md:-bottom-24 text-white/[0.08] leading-none select-none"
+              style={{ fontSize: "min(60vw, 480px)" }}
+            >
+              N
+            </span>
           </div>
         </div>
       </section>
@@ -137,6 +139,11 @@ export default function HomePage() {
             technical standard our head coach runs at the NCAA Division I level &mdash; with a real path from a
             first dive, through OHSAA state and AAU/USA national qualification, to a college roster. We&rsquo;ve
             already sent divers to Division 1, 2, and 3 programs. Everything we do is built to keep sending more.
+          </p>
+          <p className="text-white/60 text-base leading-relaxed max-w-[65ch] mt-5">
+            We got our start in Napoleon, Ohio, and Napoleon High School still anchors our High School Only
+            program. Today our divers train primarily out of Bowling Green State University, where our head coach
+            also runs the college program.
           </p>
         </div>
       </section>
@@ -269,9 +276,13 @@ export default function HomePage() {
 
       {/* ---- Closing CTA ---- */}
       <section className="bg-ink text-white relative overflow-hidden">
-        <svg viewBox="0 0 400 400" className="absolute right-[-40px] bottom-[-60px] w-[420px] opacity-20">
-          <path d="M 20 40 C 160 20, 320 120, 260 260 C 230 330, 160 360, 130 390" fill="none" stroke="white" strokeWidth="2" />
-        </svg>
+        <span
+          aria-hidden
+          className="font-serif font-semibold absolute -right-6 -bottom-20 text-white/[0.06] leading-none select-none"
+          style={{ fontSize: "min(50vw, 380px)" }}
+        >
+          N
+        </span>
         <div className="mx-auto max-w-6xl px-5 md:px-10 py-20 relative z-10">
           <div className="max-w-[38ch]">
             <h2 className="font-serif font-semibold text-3xl md:text-4xl mb-4 leading-tight">Ready to see if diving clicks?</h2>
