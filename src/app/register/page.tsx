@@ -26,6 +26,12 @@ export default function RegisterPage() {
       <footer className="mx-auto max-w-2xl px-4 pb-10 text-xs text-mute space-y-1">
         <p>Questions? Contact Napoleon Diving Club and we&apos;ll walk you through it.</p>
         <p>
+          Want the full details in one place?{" "}
+          <a className="underline text-navy" href="/documents/welcome-information.pdf" target="_blank" rel="noopener noreferrer">
+            Download the Welcome Information packet →
+          </a>
+        </p>
+        <p>
           Practicing at Bowling Green State University? The BGSU Student Rec Center requires its own signed
           waiver and facility pass, purchased separately, in person — not through this registration.{" "}
           <a className="underline text-navy" href="/documents/bgsu-src-waiver.pdf" target="_blank" rel="noopener noreferrer">

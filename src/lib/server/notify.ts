@@ -18,12 +18,15 @@ export function renderTemplate(text: string, fields: MergeFields): string {
   return text.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key: string) => fields[key] ?? "");
 }
 
-async function deliver(job: { recipientEmail: string; subject: string; body: string }): Promise<{ ok: boolean; providerId?: string; error?: string }> {
+async function deliver(job: { recipientEmail: string; subject: string; body: string }): Promise<{ ok: boolean; skipped?: boolean; providerId?: string; error?: string }> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM ?? "Napoleon Diving Club <onboarding@resend.dev>";
   if (!apiKey) {
-    console.log(`[email:log-driver] to=${job.recipientEmail} subject="${job.subject}"`);
-    return { ok: true, providerId: `log-${Date.now()}` };
+    // No email provider configured yet. This is NOT a successful send — nothing
+    // leaves the server. Callers must record this as "skipped", not "sent", or
+    // the notification log will falsely claim delivery that never happened.
+    console.log(`[email:no-provider-configured] would have sent to=${job.recipientEmail} subject="${job.subject}"`);
+    return { ok: false, skipped: true, providerId: undefined };
   }
   try {
     const { Resend } = await import("resend");
@@ -79,10 +82,10 @@ export async function sendTemplatedEmail(opts: {
 
   const result = await deliver({ recipientEmail: opts.recipientEmail, subject, body });
   await db.update(tables.notificationJobs).set({
-    status: result.ok ? "sent" : "failed",
+    status: result.skipped ? "skipped" : result.ok ? "sent" : "failed",
     attempts: 1,
     providerId: result.providerId ?? null,
-    lastError: result.error ?? null,
+    lastError: result.skipped ? "No email provider configured (RESEND_API_KEY not set)" : (result.error ?? null),
     sentAt: result.ok ? new Date() : null,
   }).where(eq(tables.notificationJobs.id, jobId));
 }
@@ -100,10 +103,10 @@ export async function retryFailedJobs(clubId: string, maxAttempts = 3): Promise<
   for (const job of failed) {
     const result = await deliver(job);
     await db.update(tables.notificationJobs).set({
-      status: result.ok ? "sent" : "failed",
+      status: result.skipped ? "skipped" : result.ok ? "sent" : "failed",
       attempts: job.attempts + 1,
       providerId: result.providerId ?? job.providerId,
-      lastError: result.error ?? null,
+      lastError: result.skipped ? "No email provider configured (RESEND_API_KEY not set)" : (result.error ?? null),
       sentAt: result.ok ? new Date() : null,
     }).where(eq(tables.notificationJobs.id, job.id));
     if (result.ok) retried++;

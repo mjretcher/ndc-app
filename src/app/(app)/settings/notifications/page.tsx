@@ -28,9 +28,21 @@ export default async function NotificationsSettingsPage() {
     limit: 40,
   });
   const failed = jobs.filter((j) => j.status === "failed").length;
+  const skipped = jobs.filter((j) => j.status === "skipped").length;
+  const emailConfigured = !!process.env.RESEND_API_KEY;
 
   return (
     <div className="space-y-6">
+      {!emailConfigured && (
+        <section className="card p-4 border-warn bg-warn-soft">
+          <h2 className="font-semibold text-warn">No email provider connected yet</h2>
+          <p className="text-sm mt-1">
+            Every email below — registration confirmations, membership reminders, invoice notices,
+            practice cancellations — is being <strong>logged but not actually sent</strong>. Nothing has
+            gone out to a real inbox. Connect an email provider to start sending for real.
+          </p>
+        </section>
+      )}
       <section className="card p-4">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <h2 className="display text-lg">Send log</h2>
@@ -40,6 +52,9 @@ export default async function NotificationsSettingsPage() {
             </form>
           )}
         </div>
+        {skipped > 0 && (
+          <p className="text-xs text-mute mb-2">{skipped} of the entries below were skipped — no provider was configured at send time.</p>
+        )}
         <div className="overflow-x-auto">
           <table className="data">
             <thead><tr><th>When</th><th>Event</th><th>To</th><th>Status</th><th>Attempts</th></tr></thead>
@@ -50,7 +65,7 @@ export default async function NotificationsSettingsPage() {
                   <td className="text-sm whitespace-nowrap">{j.createdAt.toLocaleString("en-US", { dateStyle: "short", timeStyle: "short", timeZone: "America/New_York" })}</td>
                   <td className="text-sm">{eventLabels[j.eventType] ?? j.eventType}</td>
                   <td className="text-sm">{j.recipientEmail}</td>
-                  <td><span className={`chip ${j.status === "sent" ? "chip-ok" : j.status === "failed" ? "chip-danger" : "chip-warn"}`}>{j.status}</span></td>
+                  <td><span className={`chip ${j.status === "sent" ? "chip-ok" : j.status === "failed" ? "chip-danger" : j.status === "skipped" ? "chip-mute" : "chip-warn"}`}>{j.status}</span></td>
                   <td className="text-sm">{j.attempts}</td>
                 </tr>
               ))}
