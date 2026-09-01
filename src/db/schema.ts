@@ -571,6 +571,9 @@ export const practicesRelations = relations(practices, ({ one, many }) => ({
   attendance: many(attendanceRecords),
   coaches: many(practiceCoaches),
 }));
+export const practiceSeriesRelations = relations(practiceSeries, ({ one }) => ({
+  facility: one(facilities, { fields: [practiceSeries.facilityId], references: [facilities.id] }),
+}));
 export const practiceCoachesRelations = relations(practiceCoaches, ({ one }) => ({
   practice: one(practices, { fields: [practiceCoaches.practiceId], references: [practices.id] }),
   user: one(users, { fields: [practiceCoaches.userId], references: [users.id] }),

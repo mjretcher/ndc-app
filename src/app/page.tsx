@@ -1,6 +1,9 @@
 import Link from "next/link";
-import { Logo } from "@/components/Logo";
 import type { Metadata } from "next";
+import { PublicNav, PublicFooter } from "@/components/PublicSite";
+import { getCurrentWeekSchedule } from "@/lib/server/public-schedule";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Napoleon Diving Club | Youth Competitive Diving in Bowling Green, Ohio",
@@ -47,27 +50,14 @@ const jsonLd = {
   ],
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { days: schedule, primaryFacilityName } = await getCurrentWeekSchedule();
+
   return (
     <div className="bg-paper text-ink">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      {/* ---- Nav ---- */}
-      <nav className="mx-auto max-w-6xl flex items-center justify-between px-5 py-6 md:px-10">
-        <div className="flex items-center gap-2.5 font-bold">
-          <Logo size="sm" />
-          <span className="hidden sm:inline">Napoleon Diving Club</span>
-        </div>
-        <div className="hidden md:flex items-center gap-8 text-sm font-semibold text-navy">
-          <a href="#programs" className="hover:text-ink">Programs</a>
-          <a href="#coaches" className="hover:text-ink">Coaches</a>
-          <a href="#schedule" className="hover:text-ink">Schedule</a>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <Link href="/portal/sign-in" className="btn btn-secondary !min-h-10 !py-2 text-sm">Family sign in</Link>
-          <Link href="/register" className="btn btn-primary !min-h-10 !py-2 text-sm">Register</Link>
-        </div>
-      </nav>
+      <PublicNav />
 
       {/* ---- Hero ---- */}
       <section className="mx-auto max-w-6xl px-5 md:px-10">
@@ -198,56 +188,17 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ---- Programs ---- */}
+      {/* ---- Programs teaser ---- */}
       <section id="programs" className="mx-auto max-w-6xl px-5 md:px-10 py-16 md:py-20">
-        <div className="max-w-[56ch] mb-11">
-          <h2 className="font-serif font-semibold text-3xl mb-3">Two ways to pay, zero pressure to pick the &ldquo;right&rdquo; one.</h2>
-          <p className="text-mute text-lg leading-relaxed">
-            Practices flex around your family&rsquo;s schedule, not the other way around &mdash; switch between
-            these as seasons change, with a few days&rsquo; notice before the next billing cycle.
-          </p>
-        </div>
-        <div className="grid md:grid-cols-[1.4fr_1fr] gap-6">
-          <div className="rounded-2xl bg-ink text-white p-8">
-            <h3 className="font-serif font-semibold text-2xl mb-2.5">Monthly Flat Rate</h3>
-            <p className="text-white/75 max-w-[52ch] mb-6 leading-relaxed">
-              Best for divers building toward a real competitive season. Most economical option, and fits any
-              level from Lesson through Elite.
+        <div className="rounded-2xl bg-ink text-white p-8 md:p-12 flex flex-col md:flex-row md:items-center gap-6 md:gap-10 justify-between">
+          <div className="max-w-[46ch]">
+            <h2 className="font-serif font-semibold text-2xl md:text-3xl mb-2.5">Two ways to pay, zero pressure to pick the &ldquo;right&rdquo; one.</h2>
+            <p className="text-white/75 leading-relaxed">
+              A Monthly Flat Rate for divers building a competitive season, or Per Practice for divers juggling
+              another sport &mdash; see current rates and what each includes.
             </p>
-            <dl className="text-sm">
-              {[
-                ["Lesson Program", "$70/mo"],
-                ["Beginner \u00b7 Orange Team", "$110/mo"],
-                ["Intermediate \u00b7 Brown Team", "$145/mo"],
-                ["Elite \u00b7 Navy Team", "$200/mo"],
-                ["High School Only", "$550/season"],
-              ].map(([label, price], i, arr) => (
-                <div key={label} className={`flex justify-between py-2.5 ${i < arr.length - 1 ? "border-b border-white/15" : ""}`}>
-                  <dt>{label}</dt>
-                  <dd className="font-serif font-semibold">{price}</dd>
-                </div>
-              ))}
-            </dl>
           </div>
-          <div className="rounded-2xl border border-line p-8">
-            <h3 className="font-serif font-semibold text-2xl mb-2.5">Per Practice</h3>
-            <p className="text-mute max-w-[52ch] mb-6 leading-relaxed">
-              For divers juggling another sport. We track attendance electronically and bill only for what you use.
-            </p>
-            <dl className="text-sm">
-              {[
-                ["Lesson & Beginner", "$15"],
-                ["Weekend rate", "$18"],
-                ["Intermediate & Elite", "$20"],
-                ["Weekend rate", "$25"],
-              ].map(([label, price], i, arr) => (
-                <div key={label + price} className={`flex justify-between py-2.5 ${i < arr.length - 1 ? "border-b border-line" : ""}`}>
-                  <dt>{label}</dt>
-                  <dd className="font-serif font-semibold">{price}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
+          <Link href="/programs" className="btn btn-primary !min-h-12 !px-7 text-base shrink-0">See pricing & programs</Link>
         </div>
       </section>
 
@@ -255,23 +206,28 @@ export default function HomePage() {
       <section id="schedule" className="mx-auto max-w-6xl px-5 md:px-10 py-16 md:py-20">
         <div className="max-w-[56ch] mb-8">
           <h2 className="font-serif font-semibold text-3xl mb-3">What a normal week looks like.</h2>
-          <p className="text-mute text-lg">All practices this month are held at Bowling Green State University.</p>
+          <p className="text-mute text-lg">
+            {primaryFacilityName ? `All practices this month are held at ${primaryFacilityName}.` : "Reach out for current practice locations."}
+          </p>
         </div>
-        <div className="flex gap-3.5 overflow-x-auto pb-2">
-          {[
-            { day: "Monday", time: "6:00\u20137:30 PM", tag: null },
-            { day: "Tuesday", time: "6:15\u20138:00 PM", tag: null },
-            { day: "Wednesday", time: "6:15\u20137:45 PM", tag: "Cancels if under 4" },
-            { day: "Thursday", time: "5:45\u20137:15 PM", tag: null },
-          ].map((d) => (
-            <div key={d.day} className={`flex-none w-48 rounded-2xl border p-5 ${d.tag ? "bg-accent-soft border-accent" : "bg-card border-line"}`}>
-              <p className="font-serif font-semibold text-lg mb-2">{d.day}</p>
-              <p className="font-bold text-navy mb-1">{d.time}</p>
-              <p className="text-sm text-mute">{d.tag ? "Sign-up required" : "Weekday practice"}</p>
-              {d.tag && <span className="inline-block mt-2 text-xs font-bold text-accent bg-white px-2.5 py-1 rounded-full">{d.tag}</span>}
-            </div>
-          ))}
-        </div>
+        {schedule.length > 0 ? (
+          <div className="flex gap-3.5 overflow-x-auto pb-2">
+            {schedule.map((d) => (
+              <div key={d.day} className={`flex-none w-48 rounded-2xl border p-5 ${d.requiresSignup ? "bg-accent-soft border-accent" : "bg-card border-line"}`}>
+                <p className="font-serif font-semibold text-lg mb-2">{d.day}</p>
+                <p className="font-bold text-navy mb-1">{d.time}</p>
+                <p className="text-sm text-mute">{d.requiresSignup ? "Sign-up required" : "Weekday practice"}</p>
+                {d.requiresSignup && d.minSignupCount && (
+                  <span className="inline-block mt-2 text-xs font-bold text-accent bg-white px-2.5 py-1 rounded-full">
+                    Cancels if under {d.minSignupCount}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-mute">Schedule coming soon &mdash; reach out and we&rsquo;ll walk you through practice times.</p>
+        )}
       </section>
 
       {/* ---- Closing CTA ---- */}
@@ -295,13 +251,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer className="mx-auto max-w-6xl px-5 md:px-10 py-9 flex flex-wrap justify-between gap-3 text-sm text-mute">
-        <div>Napoleon Diving Club &middot; napoleondivingclub@gmail.com</div>
-        <div className="flex gap-5">
-          <span>Bowling Green State University &middot; Napoleon High School</span>
-          <Link href="/sign-in" className="underline">Coach sign in</Link>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }
