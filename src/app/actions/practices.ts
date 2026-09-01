@@ -21,7 +21,7 @@ export async function createPracticeSeries(formData: FormData) {
   const session = await requireCoach();
   const title = String(formData.get("title") || "Practice").trim();
   const facilityId = String(formData.get("facilityId") || "") || null;
-  const category = String(formData.get("category") || "weekday") as "weekday" | "sunday" | "clinic" | "non_billable";
+  const category = String(formData.get("category") || "weekday") as "weekday" | "saturday" | "sunday" | "clinic" | "non_billable";
   const startTime = String(formData.get("startTime") || "17:30");
   const endTime = String(formData.get("endTime") || "19:30");
   const rangeStart = String(formData.get("rangeStart")) as YMD;
@@ -83,7 +83,7 @@ export async function createOneOffPractice(formData: FormData) {
   const startTime = String(formData.get("startTime") || "17:30");
   const endTime = String(formData.get("endTime") || "19:30");
   const facilityId = String(formData.get("facilityId") || "") || null;
-  const category = String(formData.get("category") || "weekday") as "weekday" | "sunday" | "clinic" | "non_billable";
+  const category = String(formData.get("category") || "weekday") as "weekday" | "saturday" | "sunday" | "clinic" | "non_billable";
   const eligibleGroupIds = parseIds(formData, "groupIds");
   const capacity = formData.get("capacity") ? Number(formData.get("capacity")) : null;
   const publicDescription = String(formData.get("publicDescription") || "") || null;
@@ -116,7 +116,7 @@ export async function updatePractice(formData: FormData) {
   const startTime = String(formData.get("startTime"));
   const endTime = String(formData.get("endTime"));
   const facilityId = String(formData.get("facilityId") || "") || null;
-  const category = String(formData.get("category")) as "weekday" | "sunday" | "clinic" | "non_billable";
+  const category = String(formData.get("category")) as "weekday" | "saturday" | "sunday" | "clinic" | "non_billable";
   const notifyFamilies = formData.get("notify") === "on";
   const changeSummary = String(formData.get("changeSummary") || "").trim();
 

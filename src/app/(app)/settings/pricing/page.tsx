@@ -76,6 +76,7 @@ export default async function PricingPage() {
               <label className="label" htmlFor="rc">Category</label>
               <select id="rc" name="category" className="input">
                 <option value="weekday">Weekday</option>
+                <option value="saturday">Saturday</option>
                 <option value="sunday">Sunday</option>
                 <option value="clinic">Clinic</option>
               </select>

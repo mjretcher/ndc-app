@@ -85,6 +85,7 @@ export default async function NewPracticePage({ searchParams }: { searchParams: 
               <label className="label" htmlFor="category">Billing category</label>
               <select id="category" name="category" className="input" defaultValue="weekday">
                 <option value="weekday">Weekday practice</option>
+                <option value="saturday">Saturday practice (billed at Sunday rate)</option>
                 <option value="sunday">Sunday practice</option>
                 <option value="clinic">Clinic</option>
                 <option value="non_billable">Non-billable</option>
@@ -142,6 +143,7 @@ export default async function NewPracticePage({ searchParams }: { searchParams: 
               <select id="ocategory" name="category" className="input" defaultValue="clinic">
                 <option value="clinic">Clinic</option>
                 <option value="weekday">Weekday practice</option>
+                <option value="saturday">Saturday practice (billed at Sunday rate)</option>
                 <option value="sunday">Sunday practice</option>
                 <option value="non_billable">Non-billable</option>
               </select>

@@ -6,7 +6,7 @@
 import { splitEvenCents, percentOfCents } from "./money";
 import { ymdInRange, type YMD } from "./dates";
 
-export type PracticeCategory = "weekday" | "sunday" | "clinic" | "non_billable";
+export type PracticeCategory = "weekday" | "saturday" | "sunday" | "clinic" | "non_billable";
 export type AttendanceStatus = "unmarked" | "present" | "absent" | "excused" | "trial";
 export type PlanType = "flat_monthly" | "per_practice" | "seasonal_installment" | "custom";
 

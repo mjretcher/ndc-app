@@ -19,7 +19,7 @@ export const billingPlanTypeEnum = pgEnum("billing_plan_type", [
   "flat_monthly", "per_practice", "seasonal_installment", "custom",
 ]);
 export const practiceCategoryEnum = pgEnum("practice_category", [
-  "weekday", "sunday", "clinic", "non_billable",
+  "weekday", "saturday", "sunday", "clinic", "non_billable",
 ]);
 export const practiceStatusEnum = pgEnum("practice_status", [
   "scheduled", "changed", "canceled", "completed",

@@ -50,7 +50,7 @@ export default async function PracticeDetail({ params }: { params: Promise<{ id:
     excused: practice.attendance.filter((a) => a.status === "excused").length,
   };
 
-  const catLabel = { weekday: "Weekday practice", sunday: "Sunday practice", clinic: "Clinic", non_billable: "Non-billable" }[practice.category];
+  const catLabel = { weekday: "Weekday practice", saturday: "Saturday practice", sunday: "Sunday practice", clinic: "Clinic", non_billable: "Non-billable" }[practice.category];
 
   return (
     <div className="space-y-5 max-w-2xl">

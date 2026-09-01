@@ -14,7 +14,7 @@ import type { YMD } from "@/lib/dates";
 export async function addRate(formData: FormData) {
   const session = await requireAdmin();
   const groupId = String(formData.get("groupId") || "") || null;
-  const category = String(formData.get("category")) as "weekday" | "sunday" | "clinic" | "non_billable";
+  const category = String(formData.get("category")) as "weekday" | "saturday" | "sunday" | "clinic" | "non_billable";
   const amountCents = parseDollarsToCents(String(formData.get("amount")));
   const effectiveStart = String(formData.get("effectiveStart")) as YMD;
   if (!effectiveStart) throw new Error("Set an effective start date.");

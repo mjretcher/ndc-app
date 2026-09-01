@@ -68,6 +68,7 @@ export default async function EditPracticePage({ params }: { params: Promise<{ i
             <label className="label" htmlFor="category">Billing category</label>
             <select id="category" name="category" defaultValue={practice.category} className="input">
               <option value="weekday">Weekday practice</option>
+              <option value="saturday">Saturday practice (billed at Sunday rate)</option>
               <option value="sunday">Sunday practice</option>
               <option value="clinic">Clinic</option>
               <option value="non_billable">Non-billable</option>
