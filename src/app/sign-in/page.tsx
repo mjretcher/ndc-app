@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 export const metadata = { title: "Sign in" };
 
 export default async function SignInPage() {
-  if (await maybeCoach()) redirect("/");
+  if (await maybeCoach()) redirect("/today");
   return (
     <div className="min-h-dvh flex items-center justify-center px-4 bg-ink">
       <div className="w-full max-w-sm">

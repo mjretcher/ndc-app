@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 type Role = "owner_admin" | "coach";
 
 const primary = [
-  { href: "/", label: "Today" },
+  { href: "/today", label: "Today" },
   { href: "/calendar", label: "Calendar" },
   { href: "/divers", label: "Divers" },
   { href: "/billing", label: "Billing" },
@@ -31,7 +31,7 @@ const secondary = (role: Role) => [
 ];
 
 function isActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+  return pathname === href || pathname.startsWith(href + "/");
 }
 
 export function NavLinks({ role }: { role: Role }) {
@@ -68,7 +68,7 @@ export function NavLinks({ role }: { role: Role }) {
 }
 
 const mobileItems = [
-  { href: "/", label: "Today", icon: "M12 3l8 6v11h-5v-6h-6v6H4V9z" },
+  { href: "/today", label: "Today", icon: "M12 3l8 6v11h-5v-6h-6v6H4V9z" },
   { href: "/calendar", label: "Calendar", icon: "M7 3v3M17 3v3M4 8h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z" },
   { href: "/divers", label: "Divers", icon: "M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 3.5-6 8-6s8 2 8 6" },
   { href: "/billing", label: "Billing", icon: "M4 7h16a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1zM3 11h18M7 15h4" },

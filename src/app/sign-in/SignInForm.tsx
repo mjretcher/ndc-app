@@ -25,7 +25,7 @@ export function SignInForm() {
       setError("That email and password combination didn't work. Check both and try again.");
       return;
     }
-    router.push("/");
+    router.push("/today");
     router.refresh();
   }
 
