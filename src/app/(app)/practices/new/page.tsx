@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db, tables } from "@/db";
-import { and, eq, asc } from "drizzle-orm";
+import { and, eq, asc, inArray } from "drizzle-orm";
 import { requireCoach } from "@/lib/server/session";
 import { createPracticeSeries, createOneOffPractice } from "@/app/actions/practices";
 import { todayYMD } from "@/lib/dates";
@@ -19,6 +19,14 @@ export default async function NewPracticePage({ searchParams }: { searchParams: 
   const groups = await db.query.groups.findMany({
     where: and(eq(tables.groups.clubId, session.clubId), eq(tables.groups.active, true)),
     orderBy: [asc(tables.groups.sortOrder)],
+  });
+  const coaches = await db.query.clubMemberships.findMany({
+    where: and(
+      eq(tables.clubMemberships.clubId, session.clubId),
+      eq(tables.clubMemberships.active, true),
+      inArray(tables.clubMemberships.role, ["owner_admin", "coach"]),
+    ),
+    with: { user: true },
   });
 
   const weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -104,6 +112,18 @@ export default async function NewPracticePage({ searchParams }: { searchParams: 
             </div>
             <p className="hint mt-1">Unchecked = that group won&apos;t appear on the attendance roster.</p>
           </fieldset>
+          <fieldset>
+            <legend className="label">Assigned coaches</legend>
+            <div className="flex flex-wrap gap-2">
+              {coaches.map((c) => (
+                <label key={c.userId} className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm has-checked:border-navy has-checked:bg-pool cursor-pointer">
+                  <input type="checkbox" name="coachIds" value={c.userId} />
+                  {c.user.name}
+                </label>
+              ))}
+            </div>
+            {coaches.length === 0 && <p className="hint mt-1">No active coach accounts found.</p>}
+          </fieldset>
           <div>
             <label className="label" htmlFor="notes">Internal notes</label>
             <textarea id="notes" name="notes" rows={2} className="input" />
@@ -160,6 +180,17 @@ export default async function NewPracticePage({ searchParams }: { searchParams: 
                 <label key={g.id} className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm has-checked:border-navy has-checked:bg-pool cursor-pointer">
                   <input type="checkbox" name="groupIds" value={g.id} defaultChecked />
                   {g.name}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend className="label">Assigned coaches</legend>
+            <div className="flex flex-wrap gap-2">
+              {coaches.map((c) => (
+                <label key={c.userId} className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm has-checked:border-navy has-checked:bg-pool cursor-pointer">
+                  <input type="checkbox" name="coachIds" value={c.userId} />
+                  {c.user.name}
                 </label>
               ))}
             </div>

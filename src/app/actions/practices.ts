@@ -28,19 +28,20 @@ export async function createPracticeSeries(formData: FormData) {
   const rangeEnd = String(formData.get("rangeEnd")) as YMD;
   const weekdays = formData.getAll("weekdays").map((v) => Number(v));
   const eligibleGroupIds = parseIds(formData, "groupIds");
+  const coachUserIds = parseIds(formData, "coachIds");
   const notes = String(formData.get("notes") || "") || null;
 
   if (!rangeStart || !rangeEnd || rangeEnd < rangeStart) throw new Error("Check the date range.");
   if (weekdays.length === 0) throw new Error("Pick at least one weekday.");
   // Cap expansion at ~1 year of daily practices for safety.
   const spanDays = Math.round((Date.parse(rangeEnd) - Date.parse(rangeStart)) / 86400000);
-  if (spanDays > 400) throw new Error("Series can span at most 400 days. Create another series for the next season.");
+  if (spanDays > 400) throw new Error("Series can span at most 400 days. Create another season for the next season.");
 
   let firstId = "";
   await db.transaction(async (tx) => {
     const [series] = await tx.insert(tables.practiceSeries).values({
       clubId: session.clubId, title, facilityId, weekdays, startTime, endTime,
-      rangeStart, rangeEnd, category, eligibleGroupIds, notes,
+      rangeStart, rangeEnd, category, eligibleGroupIds, defaultCoachIds: coachUserIds, notes,
     }).returning();
 
     let count = 0;
@@ -61,6 +62,11 @@ export async function createPracticeSeries(formData: FormData) {
         eligibleGroupIds,
         internalNotes: notes,
       }).returning({ id: tables.practices.id });
+      if (coachUserIds.length > 0) {
+        await tx.insert(tables.practiceCoaches).values(
+          coachUserIds.map((userId) => ({ practiceId: p.id, userId })),
+        );
+      }
       if (!firstId) firstId = p.id;
       count++;
     }
@@ -85,6 +91,7 @@ export async function createOneOffPractice(formData: FormData) {
   const facilityId = String(formData.get("facilityId") || "") || null;
   const category = String(formData.get("category") || "weekday") as "weekday" | "saturday" | "sunday" | "clinic" | "non_billable";
   const eligibleGroupIds = parseIds(formData, "groupIds");
+  const coachUserIds = parseIds(formData, "coachIds");
   const capacity = formData.get("capacity") ? Number(formData.get("capacity")) : null;
   const publicDescription = String(formData.get("publicDescription") || "") || null;
 
@@ -96,6 +103,11 @@ export async function createOneOffPractice(formData: FormData) {
       facilityId, category, eligibleGroupIds, capacity, publicDescription,
     }).returning();
     id = p.id;
+    if (coachUserIds.length > 0) {
+      await tx.insert(tables.practiceCoaches).values(
+        coachUserIds.map((userId) => ({ practiceId: p.id, userId })),
+      );
+    }
     await recordAudit(tx, {
       clubId: session.clubId, actorUserId: session.userId,
       action: "practice.create", entityType: "practice", entityId: p.id,
@@ -119,6 +131,8 @@ export async function updatePractice(formData: FormData) {
   const category = String(formData.get("category")) as "weekday" | "saturday" | "sunday" | "clinic" | "non_billable";
   const notifyFamilies = formData.get("notify") === "on";
   const changeSummary = String(formData.get("changeSummary") || "").trim();
+  const coachUserIds = parseIds(formData, "coachIds");
+  const coachesProvided = formData.has("coachesFieldPresent");
 
   const practice = await db.query.practices.findFirst({
     where: and(eq(tables.practices.id, practiceId), eq(tables.practices.clubId, session.clubId)),
@@ -148,6 +162,15 @@ export async function updatePractice(formData: FormData) {
         category,
         status: t.status === "canceled" ? "canceled" : "changed",
       }).where(eq(tables.practices.id, t.id));
+
+      if (coachesProvided) {
+        await tx.delete(tables.practiceCoaches).where(eq(tables.practiceCoaches.practiceId, t.id));
+        if (coachUserIds.length > 0) {
+          await tx.insert(tables.practiceCoaches).values(
+            coachUserIds.map((userId) => ({ practiceId: t.id, userId })),
+          );
+        }
+      }
     }
     await recordAudit(tx, {
       clubId: session.clubId, actorUserId: session.userId,

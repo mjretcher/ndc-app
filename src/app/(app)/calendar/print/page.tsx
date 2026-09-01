@@ -27,7 +27,7 @@ export default async function CalendarPrintPage({ searchParams }: { searchParams
       gte(tables.practices.practiceDate, first),
       lte(tables.practices.practiceDate, last),
     ),
-    with: { facility: true },
+    with: { facility: true, coaches: { with: { user: true } } },
     orderBy: [asc(tables.practices.startsAt)],
   });
 
@@ -115,6 +115,9 @@ export default async function CalendarPrintPage({ searchParams }: { searchParams
                           <div>{formatLocalTime(p.startsAt)}–{formatLocalTime(p.endsAt)}</div>
                           <div>{p.title}</div>
                           {p.facility && <div className="font-normal opacity-90">{p.facility.name}</div>}
+                          {p.coaches.length > 0 && (
+                            <div className="font-normal opacity-90">Coach: {p.coaches.map((c) => c.user.name).join(", ")}</div>
+                          )}
                         </div>
                       ))}
                     </div>

@@ -26,9 +26,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       gte(tables.practices.practiceDate, first),
       lte(tables.practices.practiceDate, last),
     ),
-    with: { facility: true },
+    with: { facility: true, coaches: true },
     orderBy: [asc(tables.practices.startsAt)],
   });
+  const uncoveredCount = practices.filter((p) => p.status !== "canceled" && p.coaches.length === 0).length;
 
   const byDate = new Map<string, typeof practices>();
   for (const p of practices) {
@@ -65,12 +66,21 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         </div>
       </header>
 
+      {uncoveredCount > 0 && (
+        <p className="text-sm px-3 py-2 rounded-lg bg-warn-soft text-warn font-semibold">
+          ⚠ {uncoveredCount} practice{uncoveredCount === 1 ? "" : "s"} this month {uncoveredCount === 1 ? "has" : "have"} no coach assigned — look for the red dot below.
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-3 text-xs">
         {CATEGORY_LEGEND.map((c) => (
           <span key={c.label} className="flex items-center gap-1.5">
             <span className={`h-3 w-3 rounded inline-block ${c.dot}`} /> {c.label}
           </span>
         ))}
+        <span className="flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-full inline-block bg-danger" /> No coach assigned
+        </span>
       </div>
 
       {/* Desktop grid */}
@@ -87,7 +97,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                   <div className="mt-1 space-y-1">
                     {(byDate.get(d) ?? []).map((p) => (
                       <Link key={p.id} href={`/practices/${p.id}`}
-                        className={`block rounded px-1.5 py-0.5 text-[0.68rem] font-semibold leading-tight truncate ${catColor(p.category, p.status)}`}>
+                        className={`relative block rounded px-1.5 py-0.5 text-[0.68rem] font-semibold leading-tight truncate ${catColor(p.category, p.status)}`}>
+                        {p.status !== "canceled" && p.coaches.length === 0 && (
+                          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-danger ring-1 ring-white" title="No coach assigned" />
+                        )}
                         {formatLocalTime(p.startsAt)} {p.title}
                       </Link>
                     ))}
@@ -116,6 +129,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                   <span className={`text-sm ${p.status === "canceled" ? "line-through text-mute" : ""}`}>
                     {formatLocalTime(p.startsAt)}–{formatLocalTime(p.endsAt)} <span className="font-semibold">{p.title}</span>
                     {p.facility ? ` · ${p.facility.name}` : ""}
+                    {p.status !== "canceled" && p.coaches.length === 0 && (
+                      <span className="chip chip-danger ml-1.5 !py-0">No coach</span>
+                    )}
                   </span>
                 </Link>
               ))}

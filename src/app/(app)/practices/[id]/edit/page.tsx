@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, tables } from "@/db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { requireCoach } from "@/lib/server/session";
 import { updatePractice, cancelPractice } from "@/app/actions/practices";
 import { formatLocalDate, type YMD } from "@/lib/dates";
@@ -26,6 +26,18 @@ export default async function EditPracticePage({ params }: { params: Promise<{ i
   const facilities = await db.query.facilities.findMany({
     where: and(eq(tables.facilities.clubId, session.clubId), eq(tables.facilities.active, true)),
   });
+  const coaches = await db.query.clubMemberships.findMany({
+    where: and(
+      eq(tables.clubMemberships.clubId, session.clubId),
+      eq(tables.clubMemberships.active, true),
+      inArray(tables.clubMemberships.role, ["owner_admin", "coach"]),
+    ),
+    with: { user: true },
+  });
+  const assignedCoaches = await db.query.practiceCoaches.findMany({
+    where: eq(tables.practiceCoaches.practiceId, practice.id),
+  });
+  const assignedCoachIds = new Set(assignedCoaches.map((a) => a.userId));
   const inSeries = practice.seriesId != null;
 
   return (
@@ -76,6 +88,19 @@ export default async function EditPracticePage({ params }: { params: Promise<{ i
             <p className="hint mt-1">Changing this re-prices any charges already created from attendance.</p>
           </div>
         </div>
+        <fieldset>
+          <legend className="label">Assigned coaches</legend>
+          <input type="hidden" name="coachesFieldPresent" value="1" />
+          <div className="flex flex-wrap gap-2">
+            {coaches.map((c) => (
+              <label key={c.userId} className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm has-checked:border-navy has-checked:bg-pool cursor-pointer">
+                <input type="checkbox" name="coachIds" value={c.userId} defaultChecked={assignedCoachIds.has(c.userId)} />
+                {c.user.name}
+              </label>
+            ))}
+          </div>
+          {inSeries && <p className="hint mt-1">Applies to whichever practices the scope below covers.</p>}
+        </fieldset>
         {inSeries && (
           <fieldset>
             <legend className="label">Apply changes to</legend>

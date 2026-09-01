@@ -34,6 +34,11 @@ export default async function PracticeDetail({ params }: { params: Promise<{ id:
   const groups = await db.query.groups.findMany({ where: eq(tables.groups.clubId, session.clubId) });
   const eligibleGroups = groupIds.length === 0 ? groups : groups.filter((g) => groupIds.includes(g.id));
 
+  const assignedCoaches = await db.query.practiceCoaches.findMany({
+    where: eq(tables.practiceCoaches.practiceId, practice.id),
+    with: { user: true },
+  });
+
   const charges = await db.query.charges.findMany({
     where: and(eq(tables.charges.clubId, session.clubId), eq(tables.charges.serviceDate, practice.practiceDate)),
   });
@@ -93,6 +98,20 @@ export default async function PracticeDetail({ params }: { params: Promise<{ id:
         <p className="text-sm text-mute mt-3">
           Eligible: {eligibleGroups.map((g) => g.name).join(", ") || "All groups"}
           {practice.capacity ? ` · capacity ${practice.capacity}` : ""}
+        </p>
+        <p className="text-sm mt-2 flex items-center gap-2 flex-wrap">
+          <span className="text-mute">Coaching:</span>
+          {assignedCoaches.length === 0 ? (
+            practice.status === "canceled" ? (
+              <span className="chip chip-mute">No coach needed — canceled</span>
+            ) : (
+              <span className="chip chip-danger">No coach assigned</span>
+            )
+          ) : (
+            assignedCoaches.map((a) => (
+              <span key={a.id} className="chip chip-navy">{a.user.name}</span>
+            ))
+          )}
         </p>
         {practice.publicDescription && <p className="text-sm mt-2">{practice.publicDescription}</p>}
         {practice.internalNotes && <p className="text-sm mt-2 text-mute">Internal: {practice.internalNotes}</p>}
