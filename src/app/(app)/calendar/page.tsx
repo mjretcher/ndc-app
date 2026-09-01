@@ -3,6 +3,7 @@ import { db, tables } from "@/db";
 import { and, eq, gte, lte, asc } from "drizzle-orm";
 import { requireCoach } from "@/lib/server/session";
 import { todayYMD, monthLabel, formatLocalTime, ymdDayOfWeek, addDaysYMD, type YMD } from "@/lib/dates";
+import { categoryColorClass, categoryDotClass, CATEGORY_LEGEND } from "@/lib/practice-category-style";
 
 export const metadata = { title: "Calendar" };
 
@@ -46,11 +47,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     ...Array.from({ length: lastDay }, (_, i) => addDaysYMD(first, i)),
   ];
 
-  const catColor = (c: string, status: string) =>
-    status === "canceled" ? "bg-line text-mute line-through" :
-    c === "sunday" ? "bg-brown text-white" :
-    c === "clinic" ? "bg-accent text-white" :
-    c === "non_billable" ? "bg-pool text-navy" : "bg-navy text-white";
+  const catColor = categoryColorClass;
 
   return (
     <div className="space-y-5">
@@ -63,15 +60,17 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           <Link href={`/calendar?y=${prev.y}&m=${prev.m}`} className="btn btn-secondary" aria-label="Previous month">←</Link>
           <Link href="/calendar" className="btn btn-secondary">Today</Link>
           <Link href={`/calendar?y=${next.y}&m=${next.m}`} className="btn btn-secondary" aria-label="Next month">→</Link>
+          <Link href={`/calendar/print?y=${year}&m=${month}`} className="btn btn-secondary">Print</Link>
           <Link href="/practices/new" className="btn btn-primary">New practice</Link>
         </div>
       </header>
 
       <div className="flex flex-wrap gap-3 text-xs">
-        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-navy inline-block" /> Weekday</span>
-        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-brown inline-block" /> Sunday</span>
-        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-accent inline-block" /> Clinic</span>
-        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-pool border border-line inline-block" /> Non-billable</span>
+        {CATEGORY_LEGEND.map((c) => (
+          <span key={c.label} className="flex items-center gap-1.5">
+            <span className={`h-3 w-3 rounded inline-block ${c.dot}`} /> {c.label}
+          </span>
+        ))}
       </div>
 
       {/* Desktop grid */}
@@ -113,9 +112,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
               {list.map((p) => (
                 <Link key={p.id} href={`/practices/${p.id}`} className="flex items-center gap-2">
                   <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${
-                    p.status === "canceled" ? "bg-line" :
-                    p.category === "sunday" ? "bg-brown" : p.category === "clinic" ? "bg-accent" :
-                    p.category === "non_billable" ? "bg-pool border border-line" : "bg-navy"}`} />
+                    p.status === "canceled" ? "bg-line" : categoryDotClass(p.category)}`} />
                   <span className={`text-sm ${p.status === "canceled" ? "line-through text-mute" : ""}`}>
                     {formatLocalTime(p.startsAt)}–{formatLocalTime(p.endsAt)} <span className="font-semibold">{p.title}</span>
                     {p.facility ? ` · ${p.facility.name}` : ""}

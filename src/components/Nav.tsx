@@ -80,7 +80,7 @@ export function MobileNav() {
   return (
     <nav
       aria-label="Main"
-      className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 backdrop-blur"
+      className="md:hidden app-mobile-nav fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 backdrop-blur"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className="grid grid-cols-5">

@@ -8,7 +8,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-dvh md:flex">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:w-60 md:flex-col shrink-0 bg-ink text-white">
+      <aside className="app-sidebar hidden md:flex md:w-60 md:flex-col shrink-0 bg-ink text-white">
         <div className="px-5 py-5 border-b border-white/10">
           <Logo light />
           <p className="mt-1 text-xs text-white/60">Napoleon Diving Club</p>
@@ -34,7 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       {/* Content */}
       <div className="flex-1 min-w-0 pb-20 md:pb-0">
-        <main className="mx-auto max-w-6xl px-4 py-5 md:px-8 md:py-8">{children}</main>
+        <main className="app-main-content mx-auto max-w-6xl px-4 py-5 md:px-8 md:py-8">{children}</main>
       </div>
 
       {/* Mobile bottom nav */}
