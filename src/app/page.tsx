@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { PublicNav, PublicFooter } from "@/components/PublicSite";
+import { Logo } from "@/components/Logo";
 import { getCurrentWeekSchedule } from "@/lib/server/public-schedule";
 
 export const dynamic = "force-dynamic";
@@ -76,7 +77,7 @@ export default async function HomePage() {
               <a href="#schedule" className="font-bold text-navy border-b-2 border-accent pb-0.5">See this month&rsquo;s schedule</a>
             </div>
           </div>
-          <div className="relative bg-ink min-h-[280px] md:min-h-[480px] rounded-2xl md:rounded-3xl overflow-hidden">
+          <div className="relative bg-ink min-h-[280px] md:min-h-[480px] rounded-2xl md:rounded-3xl overflow-hidden flex items-center justify-center">
             <div
               className="absolute inset-0"
               style={{
@@ -84,13 +85,15 @@ export default async function HomePage() {
                   "linear-gradient(160deg, rgba(15,36,64,0.95), rgba(15,92,102,0.6))",
               }}
             />
-            <span
+            <div
+              className="absolute inset-0"
+              style={{ background: "radial-gradient(circle at 50% 45%, rgba(255,255,255,0.10), transparent 60%)" }}
               aria-hidden
-              className="font-serif font-semibold absolute -right-10 -bottom-16 md:-bottom-24 text-white/[0.08] leading-none select-none"
-              style={{ fontSize: "min(60vw, 480px)" }}
-            >
-              N
-            </span>
+            />
+            <div className="relative">
+              <span className="md:hidden"><Logo light size={80} /></span>
+              <span className="hidden md:inline-block"><Logo light size={150} /></span>
+            </div>
           </div>
         </div>
       </section>
@@ -231,13 +234,6 @@ export default async function HomePage() {
 
       {/* ---- Closing CTA ---- */}
       <section className="bg-ink text-white relative overflow-hidden">
-        <span
-          aria-hidden
-          className="font-serif font-semibold absolute -right-6 -bottom-20 text-white/[0.06] leading-none select-none"
-          style={{ fontSize: "min(50vw, 380px)" }}
-        >
-          N
-        </span>
         <div className="mx-auto max-w-6xl px-5 md:px-10 py-20 relative z-10">
           <div className="max-w-[38ch]">
             <h2 className="font-serif font-semibold text-3xl md:text-4xl mb-4 leading-tight">Ready to see if diving clicks?</h2>

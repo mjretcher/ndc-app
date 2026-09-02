@@ -2,8 +2,8 @@
  * Napoleon Diving Club mark — vectorized from the supplied club logo.
  * Rendered inline so `currentColor` controls the ink (white on dark, ink on light).
  */
-export function Logo({ light = false, size = "md" }: { light?: boolean; size?: "sm" | "md" | "lg" }) {
-  const h = size === "lg" ? 72 : size === "sm" ? 30 : 44;
+export function Logo({ light = false, size = "md" }: { light?: boolean; size?: "sm" | "md" | "lg" | number }) {
+  const h = typeof size === "number" ? size : size === "lg" ? 72 : size === "sm" ? 30 : 44;
   return (
     <span
       className={`inline-flex ${light ? "text-white" : "text-ink"}`}
