@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Napoleon Diving Club",
     description:
-      "From a first cannonball to a college roster — competitive youth diving out of Bowling Green, Ohio.",
+      "You don't have to be a diver to become one — competitive youth diving out of Bowling Green, Ohio, for every age and experience level.",
     url: "https://napoleondivingclub.com",
     siteName: "Napoleon Diving Club",
     type: "website",
@@ -64,13 +64,12 @@ export default async function HomePage() {
         <div className="grid md:grid-cols-[1.05fr_0.95fr] rounded-3xl overflow-hidden">
           <div className="py-8 md:py-14 pr-0 md:pr-10 flex flex-col justify-center">
             <p className="font-serif text-teal text-lg mb-1.5">Bowling Green, Ohio &middot; competitive youth diving</p>
-            <h1 className="font-serif font-semibold text-4xl md:text-5xl leading-[1.05] max-w-[11ch] mb-5">
-              From a first cannonball to a college roster.
+            <h1 className="font-serif font-semibold text-4xl md:text-5xl leading-[1.05] max-w-[15ch] mb-5">
+              You don&rsquo;t have to be a diver to become one.
             </h1>
             <p className="text-lg text-mute leading-relaxed max-w-[46ch] mb-8">
-              A real path for every diver &mdash; from a first practice to OHSAA state finals, national
-              qualification, and diving in college &mdash; coached by a staff that includes an active NCAA
-              Division I head coach.
+              Whether your child wants a fun first season, a spot on the high school team, or a path to college
+              competition, every age and experience level starts here.
             </p>
             <div className="flex items-center gap-6 flex-wrap">
               <Link href="/register" className="btn btn-primary !min-h-12 !px-7 text-base">Book a free trial practice</Link>
