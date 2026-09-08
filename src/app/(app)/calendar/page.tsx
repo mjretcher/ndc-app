@@ -119,16 +119,18 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                   <p className={`text-xs font-bold ${d === today ? "text-accent" : "text-mute"}`}>{Number(d.slice(8))}</p>
                   <div className="mt-1 space-y-1">
                     {(byDate.get(d) ?? []).map((p) => (
-                      <Link key={p.id} href={`/practices/${p.id}`}
-                        className={`relative block rounded px-1.5 py-0.5 text-[0.68rem] font-semibold leading-tight truncate ${catColor(p.category, p.status)}`}>
+                      <div key={p.id} className="relative">
+                        <Link href={`/practices/${p.id}`}
+                          className={`block rounded px-1.5 py-0.5 text-[0.68rem] font-semibold leading-tight truncate ${catColor(p.category, p.status)}`}>
+                          {formatLocalTime(p.startsAt)} {p.title}
+                        </Link>
                         {p.status !== "canceled" && p.coaches.length === 0 && (
-                          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-danger ring-1 ring-white" title="No coach assigned" />
+                          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-danger ring-1 ring-white pointer-events-none" title="No coach assigned" />
                         )}
                         {p.status !== "canceled" && p.coaches.length > 0 && hasConflict(p) && (
-                          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-accent ring-1 ring-white" title="Assigned coach unavailable" />
+                          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-accent ring-1 ring-white pointer-events-none" title="Assigned coach unavailable" />
                         )}
-                        {formatLocalTime(p.startsAt)} {p.title}
-                      </Link>
+                      </div>
                     ))}
                   </div>
                 </>

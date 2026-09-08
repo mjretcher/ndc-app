@@ -60,6 +60,11 @@ async function PendingReviewView() {
             ))}
           </ul>
         )}
+        <p className="mt-3 text-sm">
+          <a href="/schedule" className="underline text-navy" target="_blank" rel="noopener noreferrer">
+            Download or print the full monthly calendar →
+          </a>
+        </p>
       </section>
     </div>
   );
@@ -120,6 +125,11 @@ export default async function PortalHome({
           <Link className="btn btn-secondary !min-h-9 !px-3" href={`/portal?week=${weekOffset + 1}`}>Next week →</Link>
         </div>
       </div>
+      <p className="text-sm -mt-4">
+        <a href="/schedule" className="underline text-navy" target="_blank" rel="noopener noreferrer">
+          Download or print the full monthly calendar →
+        </a>
+      </p>
 
       {divers.length === 0 && (
         <p className="text-mute">No active divers found on this family account. Contact the club if this looks wrong.</p>

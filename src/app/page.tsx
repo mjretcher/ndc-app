@@ -230,6 +230,11 @@ export default async function HomePage() {
         ) : (
           <p className="text-mute">Schedule coming soon &mdash; reach out and we&rsquo;ll walk you through practice times.</p>
         )}
+        <p className="mt-5">
+          <Link href="/schedule" className="font-bold text-navy border-b-2 border-accent pb-0.5">
+            Download or print the full monthly calendar
+          </Link>
+        </p>
       </section>
 
       {/* ---- Closing CTA ---- */}
