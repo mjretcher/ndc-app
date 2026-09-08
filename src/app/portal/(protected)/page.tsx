@@ -1,8 +1,9 @@
 import { db, tables } from "@/db";
 import { and, eq, gte, lte, inArray } from "drizzle-orm";
-import { requireFamily } from "@/lib/server/session";
+import { requireFamilyOrPending } from "@/lib/server/session";
 import { formatLocalTime, toLocalYMD, type YMD } from "@/lib/dates";
 import { setRsvp } from "@/app/actions/portal";
+import { getCurrentWeekSchedule } from "@/lib/server/public-schedule";
 import Link from "next/link";
 
 export const metadata = { title: "Practice sign-up" };
@@ -20,12 +21,58 @@ function weekStart(ymd: YMD): YMD {
   return addDaysYMD(ymd, -dow);
 }
 
+/**
+ * Shown to a guardian who set a portal password at registration but whose
+ * submission hasn't been approved yet. Deliberately generic — there's no
+ * real diver/group record to personalize against until a coach approves —
+ * so this reuses the same representative weekly pattern shown on the public
+ * homepage, not a per-diver view.
+ */
+async function PendingReviewView() {
+  const { days: schedule, primaryFacilityName } = await getCurrentWeekSchedule();
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl bg-teal-soft border border-teal p-5">
+        <p className="font-semibold text-teal mb-1">Your registration is being reviewed</p>
+        <p className="text-sm text-mute">
+          A coach will review your submission and follow up by email. Once approved, you&rsquo;ll be able to sign
+          up for practices and see your athlete&rsquo;s schedule here. In the meantime, here&rsquo;s what a normal
+          week looks like.
+        </p>
+      </div>
+      <section className="card p-4">
+        <h2 className="font-semibold mb-3">Typical weekly schedule</h2>
+        {primaryFacilityName && (
+          <p className="text-sm text-mute mb-3">Practices are generally held at {primaryFacilityName}.</p>
+        )}
+        {schedule.length === 0 ? (
+          <p className="text-sm text-mute">Schedule information coming soon — check back shortly.</p>
+        ) : (
+          <ul className="divide-y divide-[var(--color-line)]">
+            {schedule.map((d) => (
+              <li key={d.day} className="py-3 flex items-center justify-between">
+                <p className="font-medium">{d.day}</p>
+                <p className="text-sm text-mute">
+                  {d.time}
+                  {d.requiresSignup && <span className="chip chip-accent ml-2 !py-0.5">Sign-up required</span>}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}
+
 export default async function PortalHome({
   searchParams,
 }: {
   searchParams?: Promise<{ week?: string }>;
 }) {
-  const session = await requireFamily();
+  const session = await requireFamilyOrPending();
+  if (session.role === "family_pending") return <PendingReviewView />;
+
   const params = await searchParams;
   const weekOffset = Number(params?.week ?? 0) || 0;
 

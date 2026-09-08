@@ -1,12 +1,12 @@
 import { Logo } from "@/components/Logo";
 import { PortalSignInForm } from "./PortalSignInForm";
-import { maybeFamily } from "@/lib/server/session";
+import { maybeFamilyOrPending } from "@/lib/server/session";
 import { redirect } from "next/navigation";
 
 export const metadata = { title: "Family sign in" };
 
 export default async function PortalSignInPage() {
-  if (await maybeFamily()) redirect("/portal");
+  if (await maybeFamilyOrPending()) redirect("/portal");
   return (
     <div className="min-h-dvh flex items-center justify-center px-4 bg-ink">
       <div className="w-full max-w-sm">

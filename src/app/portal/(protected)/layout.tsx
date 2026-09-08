@@ -1,9 +1,9 @@
-import { requireFamily } from "@/lib/server/session";
+import { requireFamilyOrPending } from "@/lib/server/session";
 import { Logo } from "@/components/Logo";
 import { signOut } from "@/lib/auth";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
-  const session = await requireFamily();
+  const session = await requireFamilyOrPending();
   return (
     <div className="min-h-dvh bg-[var(--color-bg,#f7f5f0)]">
       <header className="bg-ink text-white">

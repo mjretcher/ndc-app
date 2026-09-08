@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db, tables } from "@/db";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray, isNotNull } from "drizzle-orm";
 
 declare module "next-auth" {
   interface Session {
@@ -10,9 +10,10 @@ declare module "next-auth" {
       id: string;
       email: string;
       name: string;
-      role: "owner_admin" | "coach" | "family";
+      role: "owner_admin" | "coach" | "family" | "family_pending";
       clubId: string;
       familyId?: string;
+      submissionId?: string;
     };
   }
 }
@@ -55,34 +56,62 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const password = String(credentials?.password ?? "");
         if (!email || !password) return null;
         const user = await db.query.users.findFirst({ where: eq(tables.users.email, email) });
-        if (!user || !user.active || !user.passwordHash) return null;
-        const ok = await bcrypt.compare(password, user.passwordHash);
-        if (!ok) return null;
-        const membership = await db.query.clubMemberships.findFirst({
-          where: eq(tables.clubMemberships.userId, user.id),
+        if (user && user.active && user.passwordHash) {
+          const ok = await bcrypt.compare(password, user.passwordHash);
+          if (ok) {
+            const membership = await db.query.clubMemberships.findFirst({
+              where: eq(tables.clubMemberships.userId, user.id),
+            });
+            if (membership?.active && membership.role === "family" && membership.familyId) {
+              return {
+                id: user.id, email: user.email, name: user.name,
+                role: "family", clubId: membership.clubId, familyId: membership.familyId,
+              } as never;
+            }
+          }
+        }
+        // No approved account yet — check for a pending/needs-followup
+        // registration submission with a matching guardian email and
+        // password. The guardian's email lives inside the JSON payload
+        // rather than a queryable column, and submission volume for a
+        // single club is small, so filter in application code.
+        const submissions = await db.query.registrationSubmissions.findMany({
+          where: and(
+            inArray(tables.registrationSubmissions.status, ["pending", "needs_followup"]),
+            isNotNull(tables.registrationSubmissions.passwordHash),
+          ),
         });
-        if (!membership || !membership.active || membership.role !== "family" || !membership.familyId) return null;
-        return {
-          id: user.id, email: user.email, name: user.name,
-          role: "family", clubId: membership.clubId, familyId: membership.familyId,
-        } as never;
+        for (const s of submissions) {
+          const payload = s.payload as { guardians?: { email?: string; name?: string }[] };
+          const primaryEmail = payload.guardians?.[0]?.email?.toLowerCase().trim();
+          if (primaryEmail !== email) continue;
+          const ok = await bcrypt.compare(password, s.passwordHash!);
+          if (!ok) continue;
+          return {
+            id: `pending:${s.id}`, email, name: payload.guardians?.[0]?.name ?? email,
+            role: "family_pending", clubId: s.clubId, submissionId: s.id,
+          } as never;
+        }
+        return null;
       },
     }),
   ],
   callbacks: {
     jwt({ token, user }) {
       if (user) {
-        const u = user as { id: string; role: string; clubId: string; familyId?: string };
+        const u = user as { id: string; role: string; clubId: string; familyId?: string; submissionId?: string };
         token.uid = u.id; token.role = u.role; token.clubId = u.clubId;
         if (u.familyId) token.familyId = u.familyId;
+        if (u.submissionId) token.submissionId = u.submissionId;
       }
       return token;
     },
     session({ session, token }) {
       session.user.id = token.uid as string;
-      session.user.role = token.role as "owner_admin" | "coach" | "family";
+      session.user.role = token.role as "owner_admin" | "coach" | "family" | "family_pending";
       session.user.clubId = token.clubId as string;
       if (token.familyId) session.user.familyId = token.familyId as string;
+      if (token.submissionId) session.user.submissionId = token.submissionId as string;
       return session;
     },
   },
