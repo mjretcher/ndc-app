@@ -1,5 +1,5 @@
 import { db, tables } from "@/db";
-import { eq } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { requireAdmin } from "@/lib/server/session";
 import { upsertCoach, deactivateCoach } from "@/app/actions/settings";
 import { PasswordInput } from "@/components/PasswordInput";
@@ -9,7 +9,7 @@ export const metadata = { title: "Coaches" };
 export default async function UsersSettingsPage() {
   const session = await requireAdmin();
   const memberships = await db.query.clubMemberships.findMany({
-    where: eq(tables.clubMemberships.clubId, session.clubId),
+    where: and(eq(tables.clubMemberships.clubId, session.clubId), inArray(tables.clubMemberships.role, ["owner_admin", "coach"])),
     with: { user: true },
   });
   const rows = memberships.sort((a, b) => a.user.name.localeCompare(b.user.name));

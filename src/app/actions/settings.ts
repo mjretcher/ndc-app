@@ -255,6 +255,15 @@ export async function upsertCoach(formData: FormData) {
   await db.transaction(async (tx) => {
     let uid = userId;
     if (uid) {
+      // Guard against this form ever touching a non-coach membership (e.g. a
+      // family account) even if it somehow got rendered here — this action
+      // must never be able to grant coach-level access to a family account.
+      const existing = await tx.query.clubMemberships.findFirst({
+        where: and(eq(tables.clubMemberships.userId, uid), eq(tables.clubMemberships.clubId, session.clubId)),
+      });
+      if (existing && existing.role !== "owner_admin" && existing.role !== "coach") {
+        throw new Error("This account isn't a coach account and can't be edited here.");
+      }
       const patch: Record<string, unknown> = { name, email, active: formData.get("active") !== "off" };
       if (password) patch.passwordHash = await bcrypt.hash(password, 10);
       await tx.update(tables.users).set(patch).where(eq(tables.users.id, uid));
@@ -312,6 +321,12 @@ export async function deactivateCoach(formData: FormData) {
   const userId = String(formData.get("userId"));
   if (userId === session.userId) throw new Error("You can't deactivate your own account.");
   await db.transaction(async (tx) => {
+    const existing = await tx.query.clubMemberships.findFirst({
+      where: and(eq(tables.clubMemberships.userId, userId), eq(tables.clubMemberships.clubId, session.clubId)),
+    });
+    if (existing && existing.role !== "owner_admin" && existing.role !== "coach") {
+      throw new Error("This account isn't a coach account and can't be deactivated here.");
+    }
     await tx.update(tables.users).set({ active: false }).where(eq(tables.users.id, userId));
     await tx.update(tables.clubMemberships).set({ active: false })
       .where(and(eq(tables.clubMemberships.userId, userId), eq(tables.clubMemberships.clubId, session.clubId)));
