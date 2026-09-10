@@ -14,7 +14,7 @@ export function PublicNav() {
         <Link href="/#schedule" className="hover:text-ink">Schedule</Link>
       </div>
       <div className="flex items-center gap-2.5">
-        <Link href="/portal/sign-in" className="btn btn-secondary !min-h-10 !py-2 text-xs md:text-sm !px-3 md:!px-4">Family sign in</Link>
+        <Link href="/sign-in" className="btn btn-secondary !min-h-10 !py-2 text-xs md:text-sm !px-3 md:!px-4">Sign in</Link>
         <Link href="/register" className="btn btn-primary !min-h-10 !py-2 text-xs md:text-sm !px-3 md:!px-4">Register</Link>
         <details className="md:hidden relative">
           <summary className="list-none cursor-pointer w-10 h-10 rounded-lg border border-line flex items-center justify-center" aria-label="More links">
@@ -37,10 +37,7 @@ export function PublicFooter() {
   return (
     <footer className="mx-auto max-w-6xl px-5 md:px-10 py-9 flex flex-wrap justify-between gap-3 text-sm text-mute">
       <div>Napoleon Diving Club &middot; napoleondivingclub@gmail.com</div>
-      <div className="flex gap-5">
-        <span>Bowling Green State University &middot; Napoleon High School</span>
-        <Link href="/sign-in" className="underline">Coach sign in</Link>
-      </div>
+      <div>Bowling Green State University &middot; Napoleon High School</div>
     </footer>
   );
 }

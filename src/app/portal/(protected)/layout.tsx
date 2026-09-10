@@ -14,7 +14,7 @@ export default async function PortalLayout({ children }: { children: React.React
             <form
               action={async () => {
                 "use server";
-                await signOut({ redirectTo: "/portal/sign-in" });
+                await signOut({ redirectTo: "/sign-in" });
               }}
             >
               <button className="text-white/80 hover:text-white underline underline-offset-2">

@@ -160,7 +160,7 @@ export default async function PublicSchedulePage({ searchParams }: { searchParam
         </div>
 
         <p className="no-print text-sm text-mute">
-          Have a family account? <Link href="/portal/sign-in" className="underline text-navy">Sign in</Link> to RSVP for practices directly.
+          Have a family account? <Link href="/sign-in" className="underline text-navy">Sign in</Link> to RSVP for practices directly.
         </p>
       </div>
 

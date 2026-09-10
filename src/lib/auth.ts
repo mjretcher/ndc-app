@@ -23,8 +23,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: { signIn: "/sign-in" },
   trustHost: true,
   providers: [
-    // Coach / owner-admin sign-in. Family accounts are explicitly rejected here
-    // so a guardian credential can never land in the coach-facing app.
+    // Single sign-in path for everyone. Checks coach/admin accounts first,
+    // then approved family accounts, then pending registration submissions
+    // (a guardian who set a portal password but hasn't been approved yet).
+    // Whichever matches determines where the post-login redirect sends them.
     Credentials({
       id: "credentials",
       credentials: { email: {}, password: {} },
@@ -32,45 +34,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = String(credentials?.email ?? "").toLowerCase().trim();
         const password = String(credentials?.password ?? "");
         if (!email || !password) return null;
-        const user = await db.query.users.findFirst({ where: eq(tables.users.email, email) });
-        if (!user || !user.active || !user.passwordHash) return null;
-        const ok = await bcrypt.compare(password, user.passwordHash);
-        if (!ok) return null;
-        const membership = await db.query.clubMemberships.findFirst({
-          where: eq(tables.clubMemberships.userId, user.id),
-        });
-        if (!membership || !membership.active || membership.role === "family") return null;
-        return {
-          id: user.id, email: user.email, name: user.name,
-          role: membership.role, clubId: membership.clubId,
-        } as never;
-      },
-    }),
-    // Family portal sign-in. Only accepts role="family" memberships, and only
-    // ever returns that family's own familyId in the session.
-    Credentials({
-      id: "family",
-      credentials: { email: {}, password: {} },
-      async authorize(credentials) {
-        const email = String(credentials?.email ?? "").toLowerCase().trim();
-        const password = String(credentials?.password ?? "");
-        if (!email || !password) return null;
+
         const user = await db.query.users.findFirst({ where: eq(tables.users.email, email) });
         if (user && user.active && user.passwordHash) {
-          const ok = await bcrypt.compare(password, user.passwordHash);
-          if (ok) {
+          const validPassword = await bcrypt.compare(password, user.passwordHash);
+          if (validPassword) {
             const membership = await db.query.clubMemberships.findFirst({
               where: eq(tables.clubMemberships.userId, user.id),
             });
-            if (membership?.active && membership.role === "family" && membership.familyId) {
-              return {
-                id: user.id, email: user.email, name: user.name,
-                role: "family", clubId: membership.clubId, familyId: membership.familyId,
-              } as never;
+            if (membership?.active) {
+              if (membership.role === "owner_admin" || membership.role === "coach") {
+                return {
+                  id: user.id, email: user.email, name: user.name,
+                  role: membership.role, clubId: membership.clubId,
+                } as never;
+              }
+              if (membership.role === "family" && membership.familyId) {
+                return {
+                  id: user.id, email: user.email, name: user.name,
+                  role: "family", clubId: membership.clubId, familyId: membership.familyId,
+                } as never;
+              }
             }
           }
         }
-        // No approved account yet — check for a pending/needs-followup
+
+        // No approved account matched — check for a pending/needs-followup
         // registration submission with a matching guardian email and
         // password. The guardian's email lives inside the JSON payload
         // rather than a queryable column, and submission volume for a

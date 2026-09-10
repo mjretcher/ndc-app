@@ -35,11 +35,11 @@ export type FamilySession = {
   userId: string; email: string; name: string; clubId: string; familyId: string;
 };
 
-/** Require an authenticated guardian. Redirects to the portal sign-in otherwise. */
+/** Require an authenticated guardian. Redirects to sign-in otherwise. */
 export async function requireFamily(): Promise<FamilySession> {
   const session = await auth();
   const u = session?.user;
-  if (!u?.id || u.role !== "family" || !u.familyId) redirect("/portal/sign-in");
+  if (!u?.id || u.role !== "family" || !u.familyId) redirect("/sign-in");
   return { userId: u.id, email: u.email, name: u.name, clubId: u.clubId, familyId: u.familyId! };
 }
 
@@ -74,7 +74,7 @@ export async function requireFamilyOrPending(): Promise<PortalSession> {
   if (u?.role === "family_pending" && u.submissionId) {
     return { role: "family_pending", email: u.email, name: u.name, clubId: u.clubId, submissionId: u.submissionId };
   }
-  redirect("/portal/sign-in");
+  redirect("/sign-in");
 }
 
 /** Same as requireFamilyOrPending, but returns null instead of redirecting — for the sign-in page's own "already logged in" check. */
