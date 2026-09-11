@@ -5,7 +5,7 @@ import { and, eq, desc } from "drizzle-orm";
 import { requireCoach } from "@/lib/server/session";
 import { formatCents } from "@/lib/money";
 import { todayYMD, formatLocalDate } from "@/lib/dates";
-import { updateFamily, upsertGuardian, addDiscount, endDiscount, mergeDivers } from "@/app/actions/families";
+import { updateFamily, upsertGuardian, addDiscount, endDiscount, mergeDivers, removeGuardian } from "@/app/actions/families";
 import { addCredit, addManualCharge, recordPayment } from "@/app/actions/billing";
 import { createGuardianLogin, resetGuardianPassword, setGuardianLoginActive } from "@/app/actions/family-accounts";
 import { MergeFamilyForm } from "./MergeFamilyForm";
@@ -166,6 +166,13 @@ export default async function FamilyDetail({ params }: { params: Promise<{ id: s
                   {g.phone && <span>{g.phone}</span>}
                   {g.isPrimary && <span className="chip chip-navy">Primary</span>}
                   {g.isEmergencyContact && <span className="chip chip-danger">Emergency</span>}
+                  {g.email?.includes("@placeholder.") && <span className="chip chip-warn">Placeholder — update or remove</span>}
+                  {family.guardians.length > 1 && (
+                    <form action={removeGuardian} className="ml-auto">
+                      <input type="hidden" name="guardianId" value={g.id} />
+                      <button className="text-xs text-danger font-semibold">Remove</button>
+                    </form>
+                  )}
                 </div>
                 {session.role === "owner_admin" && (
                   <div className="mt-2">

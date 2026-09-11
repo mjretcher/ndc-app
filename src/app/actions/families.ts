@@ -429,3 +429,40 @@ export async function mergeDivers(formData: FormData) {
   revalidatePath("/divers");
   revalidatePath(`/families/${keep.familyId}`);
 }
+
+/**
+ * Remove a guardian/contact record. Refuses to remove a family's only
+ * guardian so a family can never end up with zero contacts. Doesn't touch
+ * any portal login tied to that guardian's email -- revoking access is a
+ * separate, explicit action (setGuardianLoginActive), not a side effect of
+ * cleaning up a contact record.
+ */
+export async function removeGuardian(formData: FormData) {
+  const session = await requireCoach();
+  const guardianId = String(formData.get("guardianId") || "");
+  const guardian = await db.query.guardians.findFirst({
+    where: eq(tables.guardians.id, guardianId),
+    with: { family: true },
+  });
+  if (!guardian || guardian.family.clubId !== session.clubId) throw new Error("Guardian not found.");
+
+  const siblings = await db.query.guardians.findMany({ where: eq(tables.guardians.familyId, guardian.familyId) });
+  if (siblings.length <= 1) throw new Error("A family needs at least one guardian on file — add another before removing this one.");
+
+  await db.transaction(async (tx) => {
+    await tx.delete(tables.guardians).where(eq(tables.guardians.id, guardianId));
+    // If we just removed the primary, promote the first remaining guardian
+    // with an email so the family never lacks a primary contact.
+    if (guardian.isPrimary) {
+      const remaining = siblings.filter((g) => g.id !== guardianId);
+      const promote = remaining.find((g) => g.email) ?? remaining[0];
+      if (promote) await tx.update(tables.guardians).set({ isPrimary: true }).where(eq(tables.guardians.id, promote.id));
+    }
+    await recordAudit(tx, {
+      clubId: session.clubId, actorUserId: session.userId,
+      action: "guardian.remove", entityType: "family", entityId: guardian.familyId,
+      summary: `Removed guardian ${guardian.name}${guardian.email ? ` (${guardian.email})` : ""}`,
+    });
+  });
+  revalidatePath(`/families/${guardian.familyId}`);
+}

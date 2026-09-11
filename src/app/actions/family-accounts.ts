@@ -31,7 +31,29 @@ export async function mergeFamilies(formData: FormData) {
   if (merge.status === "merged") throw new Error("That family has already been merged elsewhere.");
 
   await db.transaction(async (tx) => {
-    await tx.update(tables.guardians).set({ familyId: keepFamilyId }).where(eq(tables.guardians.familyId, mergeFamilyId));
+    // Placeholder guardians (from backfilled/hardcoded families) are junk
+    // once a real family exists -- drop them rather than carry them over,
+    // where they'd sit alongside the real contacts and could even end up
+    // marked primary. Real guardians move over normally.
+    const mergeGuardians = await tx.query.guardians.findMany({ where: eq(tables.guardians.familyId, mergeFamilyId) });
+    for (const g of mergeGuardians) {
+      if (g.email?.includes("@placeholder.")) {
+        await tx.delete(tables.guardians).where(eq(tables.guardians.id, g.id));
+      } else {
+        await tx.update(tables.guardians).set({ familyId: keepFamilyId }).where(eq(tables.guardians.id, g.id));
+      }
+    }
+    // The kept family's existing primary stays primary; demote any incoming
+    // primaries so the family never has more than one.
+    const keepHadPrimary = (await tx.query.guardians.findMany({ where: eq(tables.guardians.familyId, keepFamilyId) }))
+      .some((g) => g.isPrimary && !mergeGuardians.some((m) => m.id === g.id));
+    if (keepHadPrimary) {
+      for (const g of mergeGuardians) {
+        if (g.isPrimary && !g.email?.includes("@placeholder.")) {
+          await tx.update(tables.guardians).set({ isPrimary: false }).where(eq(tables.guardians.id, g.id));
+        }
+      }
+    }
     await tx.update(tables.divers).set({ familyId: keepFamilyId }).where(eq(tables.divers.familyId, mergeFamilyId));
     await tx.update(tables.charges).set({ familyId: keepFamilyId }).where(eq(tables.charges.familyId, mergeFamilyId));
     await tx.update(tables.invoices).set({ familyId: keepFamilyId }).where(eq(tables.invoices.familyId, mergeFamilyId));

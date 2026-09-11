@@ -2,7 +2,7 @@ import { db, tables } from "@/db";
 import { and, eq, isNull } from "drizzle-orm";
 import { recordAudit } from "@/lib/server/audit";
 import { syncPracticeCharges } from "@/lib/server/charge-sync";
-import { notifyPracticeFamilies } from "@/app/actions/practices";
+import { notifyPracticeFamilies } from "@/lib/server/practice-notify";
 
 export const dynamic = "force-dynamic";
 
