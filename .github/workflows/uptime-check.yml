@@ -2,12 +2,11 @@ name: Site uptime check
 
 on:
   schedule:
-    # Every 10 minutes. GitHub's scheduled-workflow timing isn't a hard
-    # guarantee -- it can lag a few minutes under load, especially on
-    # public repos -- so treat this as a good baseline, not a precise SLA.
-    # For a more reliable/immediate alert, consider also adding a free
-    # third-party monitor (e.g. UptimeRobot) as a second layer.
-    - cron: "*/10 * * * *"
+    # Every 12 hours (00:00 and 12:00 UTC). Free to run on any schedule --
+    # GitHub Actions has no minute limit on public repos -- this cadence
+    # is just about how long an outage could go unnoticed before this
+    # catches it, not cost.
+    - cron: "0 */12 * * *"
   workflow_dispatch: {}
 
 jobs:
