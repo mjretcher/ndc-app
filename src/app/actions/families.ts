@@ -384,6 +384,9 @@ export async function mergeDivers(formData: FormData) {
     const keepPracticeIds = new Set(keepAttendance.map((a) => a.practiceId));
     for (const a of mergeAttendance) {
       if (keepPracticeIds.has(a.practiceId)) {
+        // Change-log entries reference this record by FK -- clear those first
+        // or the delete below violates attendance_change_log's constraint.
+        await tx.delete(tables.attendanceChangeLog).where(eq(tables.attendanceChangeLog.attendanceId, a.id));
         await tx.delete(tables.attendanceRecords).where(eq(tables.attendanceRecords.id, a.id));
       } else {
         await tx.update(tables.attendanceRecords).set({ diverId: keepDiverId }).where(eq(tables.attendanceRecords.id, a.id));
