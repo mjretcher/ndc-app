@@ -18,17 +18,22 @@ export default async function PracticeDetail({ params }: { params: Promise<{ id:
     where: and(eq(tables.practices.id, id), eq(tables.practices.clubId, session.clubId)),
     with: {
       facility: true,
-      attendance: { with: { diver: true } },
+      attendance: { with: { diver: true, changeLog: { with: { changedBy: true } } } },
     },
   });
   if (!practice) notFound();
 
-  const rsvps = practice.requiresSignup
-    ? await db.query.practiceRsvps.findMany({
-        where: eq(tables.practiceRsvps.practiceId, practice.id),
-        with: { diver: true },
-      })
-    : [];
+  // Only real corrections (a status that changed after being set), not the
+  // initial mark on each diver — priorStatus is null for that first mark.
+  const corrections = practice.attendance
+    .flatMap((a) => a.changeLog.map((c) => ({ ...c, diver: a.diver })))
+    .filter((c) => c.priorStatus !== null)
+    .sort((a, b) => (a.changedAt < b.changedAt ? 1 : -1));
+
+  const rsvps = await db.query.practiceRsvps.findMany({
+    where: eq(tables.practiceRsvps.practiceId, practice.id),
+    with: { diver: true },
+  });
   const attendingCount = rsvps.filter((r) => r.status === "attending").length;
 
   const groupIds = (practice.eligibleGroupIds as string[]) ?? [];
@@ -134,15 +139,17 @@ export default async function PracticeDetail({ params }: { params: Promise<{ id:
         {practice.internalNotes && <p className="text-sm mt-2 text-mute">Internal: {practice.internalNotes}</p>}
       </section>
 
-      {practice.requiresSignup && (
+      {(practice.requiresSignup || rsvps.length > 0) && (
         <section className="card p-4">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="eyebrow">Sign-ups</h2>
-            <span className={`chip ${attendingCount >= (practice.minSignupCount ?? 0) ? "chip-ok" : "chip-warn"}`}>
-              {attendingCount} attending{practice.minSignupCount ? ` / needs ${practice.minSignupCount}` : ""}
-            </span>
+            <h2 className="eyebrow">{practice.requiresSignup ? "Sign-ups" : "Family responses"}</h2>
+            {practice.requiresSignup && (
+              <span className={`chip ${attendingCount >= (practice.minSignupCount ?? 0) ? "chip-ok" : "chip-warn"}`}>
+                {attendingCount} attending{practice.minSignupCount ? ` / needs ${practice.minSignupCount}` : ""}
+              </span>
+            )}
           </div>
-          {practice.status === "scheduled" && practice.minSignupCount != null && (
+          {practice.requiresSignup && practice.status === "scheduled" && practice.minSignupCount != null && (
             <p className="text-xs text-mute mb-2">
               Auto-cancels {practice.signupCutoffHours ?? 24}h before start if fewer than {practice.minSignupCount} are attending.
             </p>
@@ -189,6 +196,29 @@ export default async function PracticeDetail({ params }: { params: Promise<{ id:
                   {!a.billable && a.status === "present" && <span className="text-xs text-mute">not billed{a.billableOverrideReason ? `: ${a.billableOverrideReason}` : ""}</span>}
                 </li>
               ))}
+          </ul>
+        </section>
+      )}
+
+      {corrections.length > 0 && (
+        <section className="card p-4">
+          <h2 className="eyebrow mb-2">Correction history</h2>
+          <ul className="text-sm space-y-1.5">
+            {corrections.map((c) => (
+              <li key={c.id} className="text-mute">
+                <Link href={`/divers/${c.diver.id}`} className="font-semibold text-navy hover:underline">
+                  {c.diver.preferredName || c.diver.legalName}
+                </Link>
+                {" "}changed from <span className="font-medium">{c.priorStatus}</span> to{" "}
+                <span className="font-medium">{c.newStatus}</span>
+                {c.priorBillable !== c.newBillable && (
+                  <span> ({c.newBillable ? "now billed" : "now not billed"})</span>
+                )}
+                {c.reason && <span> — {c.reason}</span>}
+                {c.changedBy && <span> · by {c.changedBy.name}</span>}
+                <span> · {formatLocalDate(c.changedAt)}</span>
+              </li>
+            ))}
           </ul>
         </section>
       )}

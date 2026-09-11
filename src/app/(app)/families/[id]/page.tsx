@@ -4,7 +4,7 @@ import { db, tables } from "@/db";
 import { and, eq, desc } from "drizzle-orm";
 import { requireCoach } from "@/lib/server/session";
 import { formatCents } from "@/lib/money";
-import { todayYMD } from "@/lib/dates";
+import { todayYMD, formatLocalDate } from "@/lib/dates";
 import { updateFamily, upsertGuardian, addDiscount, endDiscount } from "@/app/actions/families";
 import { addCredit, addManualCharge, recordPayment } from "@/app/actions/billing";
 import { createGuardianLogin, resetGuardianPassword, setGuardianLoginActive } from "@/app/actions/family-accounts";
@@ -23,6 +23,7 @@ export default async function FamilyDetail({ params }: { params: Promise<{ id: s
     with: {
       guardians: true,
       divers: { with: { primaryGroup: true, planAssignments: { with: { plan: true } } } },
+      waivers: { with: { diver: true }, orderBy: (w, { desc }) => [desc(w.acceptedAt)] },
     },
   });
   if (!family) notFound();
@@ -325,6 +326,24 @@ export default async function FamilyDetail({ params }: { params: Promise<{ id: s
             </form>
           </details>
         </div>
+      </section>
+
+      <section className="card p-4">
+        <p className="font-semibold text-sm mb-2">Waivers on file</p>
+        {family.waivers.length === 0 ? (
+          <p className="text-sm text-mute">None recorded — this family registered before waiver tracking, or hasn&apos;t completed registration yet.</p>
+        ) : (
+          <ul className="text-sm space-y-1">
+            {family.waivers.map((w) => (
+              <li key={w.id} className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold">{w.diver?.preferredName || w.diver?.legalName || "Family"}</span>
+                <span className="text-mute">
+                  {w.waiverType} (v{w.version}) signed by &ldquo;{w.acceptedName}&rdquo; on {formatLocalDate(w.acceptedAt)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <details className="card p-4">

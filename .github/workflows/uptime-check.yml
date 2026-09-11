@@ -1,0 +1,24 @@
+name: Site uptime check
+
+on:
+  schedule:
+    # Every 10 minutes. GitHub's scheduled-workflow timing isn't a hard
+    # guarantee -- it can lag a few minutes under load, especially on
+    # public repos -- so treat this as a good baseline, not a precise SLA.
+    # For a more reliable/immediate alert, consider also adding a free
+    # third-party monitor (e.g. UptimeRobot) as a second layer.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the homepage responds
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "https://napoleondivingclub.com/")
+          echo "HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::napoleondivingclub.com returned HTTP $code instead of 200"
+            exit 1
+          fi

@@ -547,9 +547,14 @@ export const files = pgTable("files", {
 export const familiesRelations = relations(families, ({ many }) => ({
   guardians: many(guardians),
   divers: many(divers),
+  waivers: many(waivers),
 }));
 export const guardiansRelations = relations(guardians, ({ one }) => ({
   family: one(families, { fields: [guardians.familyId], references: [families.id] }),
+}));
+export const waiversRelations = relations(waivers, ({ one }) => ({
+  family: one(families, { fields: [waivers.familyId], references: [families.id] }),
+  diver: one(divers, { fields: [waivers.diverId], references: [divers.id] }),
 }));
 export const diversRelations = relations(divers, ({ one, many }) => ({
   family: one(families, { fields: [divers.familyId], references: [families.id] }),
@@ -584,9 +589,14 @@ export const coachWeeklyAvailabilityRelations = relations(coachWeeklyAvailabilit
 export const coachAvailabilityExceptionsRelations = relations(coachAvailabilityExceptions, ({ one }) => ({
   user: one(users, { fields: [coachAvailabilityExceptions.userId], references: [users.id] }),
 }));
-export const attendanceRelations = relations(attendanceRecords, ({ one }) => ({
+export const attendanceRelations = relations(attendanceRecords, ({ one, many }) => ({
   practice: one(practices, { fields: [attendanceRecords.practiceId], references: [practices.id] }),
   diver: one(divers, { fields: [attendanceRecords.diverId], references: [divers.id] }),
+  changeLog: many(attendanceChangeLog),
+}));
+export const attendanceChangeLogRelations = relations(attendanceChangeLog, ({ one }) => ({
+  attendance: one(attendanceRecords, { fields: [attendanceChangeLog.attendanceId], references: [attendanceRecords.id] }),
+  changedBy: one(users, { fields: [attendanceChangeLog.changedByUserId], references: [users.id] }),
 }));
 export const chargesRelations = relations(charges, ({ one }) => ({
   family: one(families, { fields: [charges.familyId], references: [families.id] }),
