@@ -5,6 +5,7 @@ import { maybeCoach } from "@/lib/server/session";
 import { toCsv } from "@/lib/csv";
 import { formatCents } from "@/lib/money";
 import type { YMD } from "@/lib/dates";
+import { formatLocalTime } from "@/lib/dates";
 
 /**
  * CSV exports. Every report screen links here. Coach-visible data only:
@@ -150,6 +151,22 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ kind: strin
         ]],
       );
       name = "ndc-import-template";
+      break;
+    }
+    case "practices": {
+      const rows = await db.query.practices.findMany({
+        where: and(eq(tables.practices.clubId, clubId), gte(tables.practices.practiceDate, from), lte(tables.practices.practiceDate, to)),
+        with: { facility: true, coaches: { with: { user: true } } },
+        orderBy: (p, { asc }) => [asc(p.practiceDate)],
+      });
+      csv = toCsv(
+        ["date", "start_time", "end_time", "title", "facility", "category", "status", "coaches", "canceled_reason"],
+        rows.map((p) => [
+          p.practiceDate, formatLocalTime(p.startsAt), formatLocalTime(p.endsAt), p.title, p.facility?.name, p.category, p.status,
+          p.coaches.map((c) => c.user.name).join("; "),
+          p.status === "canceled" ? (p.internalNotes ?? "") : "",
+        ]),
+      );
       break;
     }
     default:

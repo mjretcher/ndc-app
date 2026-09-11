@@ -214,8 +214,13 @@ export async function cancelPractice(formData: FormData) {
       });
 
   await db.transaction(async (tx) => {
-    await tx.update(tables.practices).set({ status: "canceled" })
-      .where(inArray(tables.practices.id, targets.map((t) => t.id)));
+    await tx.update(tables.practices).set({
+      status: "canceled",
+      // Persist the reason onto the practice itself, not just the audit log
+      // and outgoing email -- this is what the calendar, print calendar, and
+      // the practice-schedule export actually read to show "why" later.
+      ...(reason ? { internalNotes: reason } : {}),
+    }).where(inArray(tables.practices.id, targets.map((t) => t.id)));
     await recordAudit(tx, {
       clubId: session.clubId, actorUserId: session.userId,
       action: "practice.cancel", entityType: "practice", entityId: practiceId,

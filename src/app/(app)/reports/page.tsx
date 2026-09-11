@@ -9,6 +9,7 @@ export default async function ReportsPage() {
   const firstOfMonth = `${today.slice(0, 8)}01`;
 
   const reports = [
+    { kind: "practices", title: "Practice schedule", desc: "Every practice with facility, status, coaches, and cancellation reason — for matching against a facility's bill.", dated: true },
     { kind: "attendance", title: "Attendance", desc: "Every attendance mark per practice, with billable flags.", dated: true },
     { kind: "charges", title: "Charges", desc: "All charges by service date — plan, per-practice, manual, adjustments.", dated: true },
     { kind: "invoices", title: "Invoices", desc: "Invoice totals, discounts, credits, and status by cycle.", dated: true },

@@ -593,6 +593,7 @@ export const attendanceRelations = relations(attendanceRecords, ({ one, many }) 
   practice: one(practices, { fields: [attendanceRecords.practiceId], references: [practices.id] }),
   diver: one(divers, { fields: [attendanceRecords.diverId], references: [divers.id] }),
   changeLog: many(attendanceChangeLog),
+  recordedBy: one(users, { fields: [attendanceRecords.recordedByUserId], references: [users.id] }),
 }));
 export const attendanceChangeLogRelations = relations(attendanceChangeLog, ({ one }) => ({
   attendance: one(attendanceRecords, { fields: [attendanceChangeLog.attendanceId], references: [attendanceRecords.id] }),

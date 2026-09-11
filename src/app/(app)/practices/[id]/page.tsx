@@ -18,7 +18,7 @@ export default async function PracticeDetail({ params }: { params: Promise<{ id:
     where: and(eq(tables.practices.id, id), eq(tables.practices.clubId, session.clubId)),
     with: {
       facility: true,
-      attendance: { with: { diver: true, changeLog: { with: { changedBy: true } } } },
+      attendance: { with: { diver: true, recordedBy: true, changeLog: { with: { changedBy: true } } } },
     },
   });
   if (!practice) notFound();
@@ -180,11 +180,19 @@ export default async function PracticeDetail({ params }: { params: Promise<{ id:
 
       {practice.attendance.length > 0 && (
         <section className="card p-4">
-          <h2 className="eyebrow mb-2">Marked so far</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="eyebrow">Marked so far</h2>
+            {(() => {
+              const names = [...new Set(practice.attendance.map((a) => a.recordedBy?.name).filter(Boolean))];
+              return names.length === 1 ? <span className="text-xs text-mute">Marked by {names[0]}</span> : null;
+            })()}
+          </div>
           <ul className="text-sm space-y-1">
-            {practice.attendance
-              .sort((a, b) => (a.diver.legalName < b.diver.legalName ? -1 : 1))
-              .map((a) => (
+            {(() => {
+              const multipleRecorders = new Set(practice.attendance.map((x) => x.recordedByUserId)).size > 1;
+              return practice.attendance
+                .sort((a, b) => (a.diver.legalName < b.diver.legalName ? -1 : 1))
+                .map((a) => (
                 <li key={a.id} className="flex items-center gap-2">
                   <Link href={`/divers/${a.diverId}`} className="font-semibold text-navy hover:underline">
                     {a.diver.preferredName || a.diver.legalName}
@@ -194,8 +202,10 @@ export default async function PracticeDetail({ params }: { params: Promise<{ id:
                     a.status === "excused" ? "chip-warn" : a.status === "absent" ? "chip-mute" : "chip-mute"
                   }`}>{a.status}</span>
                   {!a.billable && a.status === "present" && <span className="text-xs text-mute">not billed{a.billableOverrideReason ? `: ${a.billableOverrideReason}` : ""}</span>}
+                  {multipleRecorders && a.recordedBy && <span className="text-xs text-mute">by {a.recordedBy.name}</span>}
                 </li>
-              ))}
+                ));
+            })()}
           </ul>
         </section>
       )}
