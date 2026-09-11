@@ -81,9 +81,17 @@ export default async function GuidePage({ params }: { params: Promise<{ org: str
   return (
     <div className="min-h-dvh bg-paper">
       <header className="bg-ink text-white">
-        <div className="mx-auto max-w-2xl px-4 py-6">
-          <Logo light />
-          <h1 className="display mt-3 text-2xl md:text-3xl">{guide.title}</h1>
+        <div className="mx-auto max-w-2xl px-4 py-6 flex items-end justify-between gap-3 flex-wrap">
+          <div>
+            <Logo light />
+            <h1 className="display mt-3 text-2xl md:text-3xl">{guide.title}</h1>
+          </div>
+          <a
+            href={`/api/guides/${slug}/pdf`}
+            className="btn btn-secondary !bg-white/10 !text-white !border-white/30 hover:!bg-white/20 text-sm shrink-0"
+          >
+            Download as PDF
+          </a>
         </div>
       </header>
       <main className="mx-auto max-w-2xl px-4 py-6 text-[0.95rem] leading-relaxed">

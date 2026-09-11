@@ -11,6 +11,7 @@ export type RosterDiver = {
   status: "unmarked" | "present" | "absent" | "excused" | "trial";
   billable: boolean;
   billableReason: string | null;
+  isWalkOn?: boolean;
 };
 
 const STATUSES = [
@@ -23,7 +24,7 @@ const STATUSES = [
 export function AttendanceSheet({ practiceId, initialRoster, walkOnOptions }: {
   practiceId: string;
   initialRoster: RosterDiver[];
-  walkOnOptions: { diverId: string; name: string }[];
+  walkOnOptions: { diverId: string; name: string; group: string | null; groupColor: string | null }[];
 }) {
   const [roster, setRoster] = useState(initialRoster);
   const [walkOns, setWalkOns] = useState(walkOnOptions);
@@ -68,7 +69,7 @@ export function AttendanceSheet({ practiceId, initialRoster, walkOnOptions }: {
     if (!opt) return;
     setWalkOns((ws) => ws.filter((w) => w.diverId !== diverId));
     setRoster((rs) => [...rs, {
-      diverId, name: opt.name.replace(/ \(.+\)$/, ""), group: null, groupColor: null,
+      diverId, name: opt.name.replace(/ \(.+\)$/, ""), group: opt.group, groupColor: opt.groupColor, isWalkOn: true,
       status: "present", billable: true, billableReason: null,
     }]);
     startTransition(async () => {
@@ -118,6 +119,7 @@ export function AttendanceSheet({ practiceId, initialRoster, walkOnOptions }: {
                   {r.group}
                 </span>
               )}
+              {r.isWalkOn && <span className="chip chip-warn">Not usually in this practice</span>}
             </div>
             <div className="mt-2 grid grid-cols-4 gap-1.5">
               {STATUSES.map((s) => (

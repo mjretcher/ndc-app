@@ -45,7 +45,12 @@ export default async function AttendancePage({ params }: { params: Promise<{ id:
   const roster = allDivers.filter((d) => inRoster(d) || markedIds.has(d.id)).map(toRosterDiver);
   const walkOnOptions = allDivers
     .filter((d) => !inRoster(d) && !markedIds.has(d.id))
-    .map((d) => ({ diverId: d.id, name: `${d.preferredName || d.legalName}${d.primaryGroup ? ` (${d.primaryGroup.name})` : ""}` }));
+    .map((d) => ({
+      diverId: d.id,
+      name: `${d.preferredName || d.legalName}${d.primaryGroup ? ` (${d.primaryGroup.name})` : ""}`,
+      group: d.primaryGroup?.name ?? null,
+      groupColor: d.primaryGroup?.colorToken ?? null,
+    }));
 
   return (
     <div className="max-w-lg mx-auto space-y-4">
