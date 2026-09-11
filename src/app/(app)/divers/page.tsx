@@ -19,7 +19,7 @@ export default async function DiversPage({ searchParams }: { searchParams: Promi
   const conds = [eq(tables.divers.clubId, session.clubId)];
   if (q) conds.push(or(ilike(tables.divers.legalName, `%${q}%`), ilike(tables.divers.preferredName, `%${q}%`))!);
   if (group) conds.push(eq(tables.divers.primaryGroupId, group));
-  if (status) conds.push(eq(tables.divers.status, status as "active" | "inactive" | "prospective"));
+  if (status) conds.push(eq(tables.divers.status, status as "active" | "inactive" | "prospective" | "merged"));
   else if (!q) conds.push(eq(tables.divers.status, "active"));
 
   const rows = await db.query.divers.findMany({
@@ -48,6 +48,7 @@ export default async function DiversPage({ searchParams }: { searchParams: Promi
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
             <option value="prospective">Prospective</option>
+            <option value="merged">Merged (duplicate records)</option>
           </select>
           <button className="btn btn-secondary">Filter</button>
         </form>

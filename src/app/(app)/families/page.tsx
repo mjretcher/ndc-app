@@ -46,7 +46,7 @@ export default async function FamiliesPage({ searchParams }: { searchParams: Pro
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold">{f.billingName}</p>
                     <p className="text-sm text-mute truncate">
-                      {f.divers.map((d) => d.preferredName || d.legalName).join(", ") || "No divers"}
+                      {f.divers.filter((d) => d.status !== "merged").map((d) => d.preferredName || d.legalName).join(", ") || "No divers"}
                       {primary?.email ? ` · ${primary.email}` : ""}
                     </p>
                   </div>

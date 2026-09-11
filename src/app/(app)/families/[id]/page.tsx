@@ -5,7 +5,7 @@ import { and, eq, desc } from "drizzle-orm";
 import { requireCoach } from "@/lib/server/session";
 import { formatCents } from "@/lib/money";
 import { todayYMD, formatLocalDate } from "@/lib/dates";
-import { updateFamily, upsertGuardian, addDiscount, endDiscount } from "@/app/actions/families";
+import { updateFamily, upsertGuardian, addDiscount, endDiscount, mergeDivers } from "@/app/actions/families";
 import { addCredit, addManualCharge, recordPayment } from "@/app/actions/billing";
 import { createGuardianLogin, resetGuardianPassword, setGuardianLoginActive } from "@/app/actions/family-accounts";
 import { MergeFamilyForm } from "./MergeFamilyForm";
@@ -111,7 +111,7 @@ export default async function FamilyDetail({ params }: { params: Promise<{ id: s
       <section aria-labelledby="divers-h">
         <h2 id="divers-h" className="eyebrow mb-2">Divers</h2>
         <div className="grid gap-3 md:grid-cols-2">
-          {family.divers.map((d) => {
+          {family.divers.filter((d) => d.status !== "merged").map((d) => {
             const plan = d.planAssignments
               .filter((a) => a.effectiveStart <= today && (!a.effectiveEnd || a.effectiveEnd >= today))
               .sort((a, b) => (a.effectiveStart < b.effectiveStart ? 1 : -1))[0];
@@ -125,6 +125,30 @@ export default async function FamilyDetail({ params }: { params: Promise<{ id: s
             );
           })}
         </div>
+        {family.divers.filter((d) => d.status !== "merged").length > 1 && (
+          <details className="card p-4 mt-3">
+            <summary className="text-sm font-semibold text-navy cursor-pointer">Merge a duplicate diver</summary>
+            <p className="text-xs text-mute mt-1 mb-2">
+              Use this if the same kid ended up with two records — for example after merging two duplicate
+              families that each already had this diver on file.
+            </p>
+            <form action={mergeDivers} className="grid gap-2 md:grid-cols-3 mt-2">
+              <select name="keepDiverId" required className="input" aria-label="Keep this one">
+                <option value="">Keep…</option>
+                {family.divers.filter((d) => d.status !== "merged").map((d) => (
+                  <option key={d.id} value={d.id}>{d.preferredName || d.legalName}</option>
+                ))}
+              </select>
+              <select name="mergeDiverId" required className="input" aria-label="Merge this one in">
+                <option value="">…merge this one in</option>
+                {family.divers.filter((d) => d.status !== "merged").map((d) => (
+                  <option key={d.id} value={d.id}>{d.preferredName || d.legalName}</option>
+                ))}
+              </select>
+              <button className="btn btn-secondary">Merge</button>
+            </form>
+          </details>
+        )}
       </section>
 
       <section aria-labelledby="guardians-h" className="card p-4">

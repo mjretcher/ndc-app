@@ -50,6 +50,13 @@
       "when": 1788230392111,
       "tag": "0006_add_coach_availability",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789142221087,
+      "tag": "0007_add_merged_diver_status",
+      "breakpoints": true
     }
   ]
 }

@@ -10,7 +10,7 @@ export const roleEnum = pgEnum("role", ["owner_admin", "coach", "family"]); // f
 export const submissionStatusEnum = pgEnum("submission_status", [
   "pending", "needs_followup", "approved", "rejected",
 ]);
-export const diverStatusEnum = pgEnum("diver_status", ["active", "inactive", "prospective"]);
+export const diverStatusEnum = pgEnum("diver_status", ["active", "inactive", "prospective", "merged"]);
 export const membershipOrgEnum = pgEnum("membership_org", ["aau", "usa_diving"]);
 export const membershipVerificationEnum = pgEnum("membership_verification", [
   "missing", "pending", "verified", "expired",

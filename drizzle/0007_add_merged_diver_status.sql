@@ -1,0 +1,1 @@
+ALTER TYPE "public"."diver_status" ADD VALUE 'merged';
