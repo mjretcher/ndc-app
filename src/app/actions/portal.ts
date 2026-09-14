@@ -31,7 +31,12 @@ export async function setRsvp(formData: FormData) {
     where: and(eq(tables.practices.id, practiceId), eq(tables.practices.clubId, session.clubId)),
   });
   if (!practice) throw new Error("Practice not found.");
-  if (practice.status !== "scheduled") throw new Error("This practice is no longer scheduled.");
+  // "changed" just means the practice was edited after creation (time,
+  // location, etc.) -- it's still happening, so RSVPs must still work.
+  // Only refuse genuinely non-signup-able states.
+  if (practice.status === "canceled" || practice.status === "completed") {
+    throw new Error("This practice is no longer open for sign-up.");
+  }
 
   await db
     .insert(tables.practiceRsvps)

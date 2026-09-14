@@ -138,7 +138,10 @@ export default async function PortalHome({
       {divers.map((diver) => {
         const eligible = practices.filter((p) => {
           const ids = (p.eligibleGroupIds as string[]) ?? [];
-          return diver.primaryGroupId && ids.includes(diver.primaryGroupId);
+          // An empty list means open to every group -- same rule the coach
+          // attendance roster uses. Without this, practices with no group
+          // restriction were hidden from every family.
+          return ids.length === 0 || (!!diver.primaryGroupId && ids.includes(diver.primaryGroupId));
         });
         return (
           <section key={diver.id} className="card p-4">
