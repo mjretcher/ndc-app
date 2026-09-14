@@ -1,5 +1,5 @@
 import { db, tables } from "@/db";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, inArray } from "drizzle-orm";
 import { recordAudit } from "@/lib/server/audit";
 import { syncPracticeCharges } from "@/lib/server/charge-sync";
 import { notifyPracticeFamilies } from "@/lib/server/practice-notify";
@@ -30,7 +30,10 @@ export async function GET(request: Request) {
 
   const candidates = await db.query.practices.findMany({
     where: and(
-      eq(tables.practices.status, "scheduled"),
+      // "changed" just means the practice was edited after creation -- it's
+      // still happening and still needs the low-sign-up check. Without this,
+      // editing a sign-up practice silently exempted it from auto-cancel.
+      inArray(tables.practices.status, ["scheduled", "changed"]),
       eq(tables.practices.requiresSignup, true),
       isNull(tables.practices.signupCheckedAt),
     ),

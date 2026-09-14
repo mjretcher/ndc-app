@@ -4,6 +4,7 @@ import { requireFamilyOrPending } from "@/lib/server/session";
 import { formatLocalTime, toLocalYMD, type YMD } from "@/lib/dates";
 import { setRsvp } from "@/app/actions/portal";
 import { getCurrentWeekSchedule } from "@/lib/server/public-schedule";
+import { isDiverEligibleForPractice } from "@/lib/eligibility";
 import Link from "next/link";
 
 export const metadata = { title: "Practice sign-up" };
@@ -136,13 +137,7 @@ export default async function PortalHome({
       )}
 
       {divers.map((diver) => {
-        const eligible = practices.filter((p) => {
-          const ids = (p.eligibleGroupIds as string[]) ?? [];
-          // An empty list means open to every group -- same rule the coach
-          // attendance roster uses. Without this, practices with no group
-          // restriction were hidden from every family.
-          return ids.length === 0 || (!!diver.primaryGroupId && ids.includes(diver.primaryGroupId));
-        });
+        const eligible = practices.filter((p) => isDiverEligibleForPractice(p.eligibleGroupIds, diver.primaryGroupId));
         return (
           <section key={diver.id} className="card p-4">
             <h2 className="font-semibold mb-3">

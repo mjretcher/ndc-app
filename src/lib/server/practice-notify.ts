@@ -2,6 +2,7 @@ import "server-only";
 import { db, tables } from "@/db";
 import { and, eq } from "drizzle-orm";
 import { sendTemplatedEmail } from "@/lib/server/notify";
+import { isDiverEligibleForPractice } from "@/lib/eligibility";
 import { formatLocalDate, formatLocalTime, type YMD } from "@/lib/dates";
 
 /**
@@ -19,14 +20,11 @@ export async function notifyPracticeFamilies(clubId: string, practiceId: string,
     with: { facility: true },
   });
   if (!practice) return;
-  const groupIds = (practice.eligibleGroupIds as string[]) ?? [];
   const clubDivers = await db.query.divers.findMany({
     where: and(eq(tables.divers.clubId, clubId), eq(tables.divers.status, "active")),
     with: { family: { with: { guardians: true } } },
   });
-  const affected = groupIds.length === 0
-    ? clubDivers
-    : clubDivers.filter((d) => d.primaryGroupId && groupIds.includes(d.primaryGroupId));
+  const affected = clubDivers.filter((d) => isDiverEligibleForPractice(practice.eligibleGroupIds, d.primaryGroupId));
 
   const seen = new Set<string>();
   for (const diver of affected) {

@@ -4,6 +4,7 @@ import { db, tables } from "@/db";
 import { and, eq } from "drizzle-orm";
 import { requireCoach } from "@/lib/server/session";
 import { formatLocalDate, formatLocalTime, type YMD } from "@/lib/dates";
+import { isDiverEligibleForPractice } from "@/lib/eligibility";
 import { AttendanceSheet, type RosterDiver } from "./AttendanceSheet";
 
 export const metadata = { title: "Attendance" };
@@ -18,7 +19,6 @@ export default async function AttendancePage({ params }: { params: Promise<{ id:
   });
   if (!practice) notFound();
 
-  const groupIds = (practice.eligibleGroupIds as string[]) ?? [];
   const allDivers = await db.query.divers.findMany({
     where: and(eq(tables.divers.clubId, session.clubId), eq(tables.divers.status, "active")),
     with: { primaryGroup: true },
@@ -26,7 +26,7 @@ export default async function AttendancePage({ params }: { params: Promise<{ id:
   });
 
   const inRoster = (d: (typeof allDivers)[number]) =>
-    groupIds.length === 0 || (d.primaryGroupId != null && groupIds.includes(d.primaryGroupId));
+    isDiverEligibleForPractice(practice.eligibleGroupIds, d.primaryGroupId);
 
   const markedIds = new Set(practice.attendance.map((a) => a.diverId));
   const toRosterDiver = (d: (typeof allDivers)[number]): RosterDiver => {

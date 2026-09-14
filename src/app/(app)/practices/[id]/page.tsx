@@ -149,7 +149,7 @@ export default async function PracticeDetail({ params }: { params: Promise<{ id:
               </span>
             )}
           </div>
-          {practice.requiresSignup && practice.status === "scheduled" && practice.minSignupCount != null && (
+          {practice.requiresSignup && (practice.status === "scheduled" || practice.status === "changed") && practice.minSignupCount != null && (
             <p className="text-xs text-mute mb-2">
               Auto-cancels {practice.signupCutoffHours ?? 24}h before start if fewer than {practice.minSignupCount} are attending.
             </p>

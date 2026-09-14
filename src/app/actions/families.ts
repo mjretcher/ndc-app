@@ -107,16 +107,20 @@ export async function upsertGuardian(formData: FormData) {
   };
   if (!values.name) throw new Error("Guardian name is required.");
   await db.transaction(async (tx) => {
+    let savedId = guardianId;
     if (guardianId) {
       await tx.update(tables.guardians).set(values).where(eq(tables.guardians.id, guardianId));
     } else {
-      await tx.insert(tables.guardians).values(values);
+      const [inserted] = await tx.insert(tables.guardians).values(values).returning({ id: tables.guardians.id });
+      savedId = inserted.id;
     }
     if (values.isPrimary) {
-      // Only one primary per family.
+      // Only one primary per family -- demote every OTHER guardian, matched
+      // by id rather than name so two contacts sharing a name (or a stray
+      // whitespace difference) can't cause the wrong one to be demoted.
       const others = await tx.query.guardians.findMany({ where: eq(tables.guardians.familyId, familyId) });
       for (const g of others) {
-        if (g.name !== values.name && g.isPrimary) {
+        if (g.id !== savedId && g.isPrimary) {
           await tx.update(tables.guardians).set({ isPrimary: false }).where(eq(tables.guardians.id, g.id));
         }
       }
