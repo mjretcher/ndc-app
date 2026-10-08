@@ -1,7 +1,8 @@
+import { UNREGISTERED_FAMILY_STATUS } from "@/lib/server/family-merge";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, tables } from "@/db";
-import { and, eq, desc } from "drizzle-orm";
+import { and, eq, desc, inArray } from "drizzle-orm";
 import { requireCoach } from "@/lib/server/session";
 import { formatCents } from "@/lib/money";
 import { todayYMD, formatLocalDate } from "@/lib/dates";
@@ -61,7 +62,7 @@ export default async function FamilyDetail({ params }: { params: Promise<{ id: s
 
   const otherFamilies = session.role === "owner_admin"
     ? await db.query.families.findMany({
-        where: and(eq(tables.families.clubId, session.clubId), eq(tables.families.status, "active")),
+        where: and(eq(tables.families.clubId, session.clubId), inArray(tables.families.status, ["active", UNREGISTERED_FAMILY_STATUS])),
         orderBy: (f, { asc }) => [asc(f.billingName)],
         limit: 300,
       })
@@ -91,7 +92,7 @@ export default async function FamilyDetail({ params }: { params: Promise<{ id: s
         </p>
       </header>
 
-      {session.role === "owner_admin" && family.status === "active" && otherFamilies.length > 0 && (
+      {session.role === "owner_admin" && (family.status === "active" || family.status === UNREGISTERED_FAMILY_STATUS) && otherFamilies.length > 0 && (
         <details className="card p-4">
           <summary className="text-sm font-semibold text-navy cursor-pointer">Merge a duplicate family into this one</summary>
           <p className="hint mt-2">
@@ -385,6 +386,7 @@ export default async function FamilyDetail({ params }: { params: Promise<{ id: s
           <select name="status" defaultValue={family.status} className="input" aria-label="Status">
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
+            {family.status === UNREGISTERED_FAMILY_STATUS && <option value={UNREGISTERED_FAMILY_STATUS}>Not yet registered</option>}
           </select>
           <input name="addressLine1" defaultValue={family.addressLine1 ?? ""} placeholder="Street" className="input" aria-label="Street" />
           <div className="grid grid-cols-3 gap-2">

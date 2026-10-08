@@ -5,6 +5,7 @@ import { and, eq, asc } from "drizzle-orm";
 import { requireCoach } from "@/lib/server/session";
 import { formatCents } from "@/lib/money";
 import { todayYMD } from "@/lib/dates";
+import { UNREGISTERED_FAMILY_STATUS } from "@/lib/server/family-merge";
 import {
   updateDiver, updateDiverMedical, updateMembership, sendMembershipReminder, assignPlan,
 } from "@/app/actions/families";
@@ -54,13 +55,22 @@ export default async function DiverDetail({ params }: { params: Promise<{ id: st
             </span>
           )}
           {diver.status !== "active" && <span className="chip chip-mute">{diver.status}</span>}
+          {diver.family.status === UNREGISTERED_FAMILY_STATUS && <span className="chip chip-warn">Not yet registered</span>}
         </div>
         <p className="text-sm text-mute mt-1">
           {diver.legalName !== (diver.preferredName || diver.legalName) ? `Legal name ${diver.legalName} · ` : ""}
-          Born {diver.birthDate}{diver.school ? ` · ${diver.school}` : ""}{diver.grade ? ` · grade ${diver.grade}` : ""}
+          {diver.birthDate ? `Born ${diver.birthDate}` : "Birth date not on file"}{diver.school ? ` · ${diver.school}` : ""}{diver.grade ? ` · grade ${diver.grade}` : ""}
           {primary ? ` · Contact ${primary.name}${primary.phone ? ` (${primary.phone})` : ""}` : ""}
         </p>
       </header>
+
+      {diver.family.status === UNREGISTERED_FAMILY_STATUS && (
+        <p className="text-sm px-3 py-2 rounded-lg bg-warn-soft text-warn font-semibold">
+          This diver was quick-added and their family hasn&apos;t registered yet. Attendance and charges are tracked
+          normally. When the registration comes in, choose this diver under &ldquo;Link to a diver already on the
+          roster&rdquo; on the approval screen so everything is combined into one record.
+        </p>
+      )}
 
       {/* Memberships */}
       <section aria-labelledby="mem-h" className="grid gap-4 md:grid-cols-2">

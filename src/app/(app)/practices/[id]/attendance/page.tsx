@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db, tables } from "@/db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, asc } from "drizzle-orm";
+import { formatCents } from "@/lib/money";
 import { requireCoach } from "@/lib/server/session";
 import { formatLocalDate, formatLocalTime, type YMD } from "@/lib/dates";
 import { isDiverEligibleForPractice } from "@/lib/eligibility";
@@ -52,6 +53,27 @@ export default async function AttendancePage({ params }: { params: Promise<{ id:
       groupColor: d.primaryGroup?.colorToken ?? null,
     }));
 
+  const groups = await db.query.groups.findMany({
+    where: and(eq(tables.groups.clubId, session.clubId), eq(tables.groups.active, true)),
+    orderBy: [asc(tables.groups.sortOrder)],
+  });
+  const plans = await db.query.billingPlans.findMany({
+    where: and(eq(tables.billingPlans.clubId, session.clubId), eq(tables.billingPlans.active, true)),
+  });
+  const quickAdd = {
+    practiceDate: practice.practiceDate as string,
+    groups: groups.map((g) => ({ id: g.id, name: g.name })),
+    plans: plans.map((pl) => ({
+      id: pl.id,
+      label: `${pl.name}${pl.amountCents ? ` (${formatCents(pl.amountCents)}/mo)` : pl.installmentTotalCents ? ` (${formatCents(pl.installmentTotalCents)} season)` : ""}`,
+    })),
+    defaultGroupId: (() => {
+      const ids = (practice.eligibleGroupIds as string[] | null) ?? [];
+      return ids.length === 1 ? ids[0] : "";
+    })(),
+    defaultPlanId: plans.find((pl) => pl.planType === "per_practice")?.id ?? "",
+  };
+
   return (
     <div className="max-w-lg mx-auto space-y-4">
       <header>
@@ -65,7 +87,7 @@ export default async function AttendancePage({ params }: { params: Promise<{ id:
           <p className="mt-2 chip chip-danger">This practice is canceled — attendance here won&apos;t bill.</p>
         )}
       </header>
-      <AttendanceSheet practiceId={id} initialRoster={roster} walkOnOptions={walkOnOptions} />
+      <AttendanceSheet practiceId={id} initialRoster={roster} walkOnOptions={walkOnOptions} quickAdd={quickAdd} />
     </div>
   );
 }

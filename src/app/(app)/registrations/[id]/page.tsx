@@ -6,6 +6,7 @@ import { requireCoach } from "@/lib/server/session";
 import { registrationSchema } from "@/lib/registration-schema";
 import { approveRegistration, rejectRegistration, requestFollowup } from "@/app/actions/registrations";
 import { formatCents } from "@/lib/money";
+import { UNREGISTERED_FAMILY_STATUS } from "@/lib/server/family-merge";
 
 export const metadata = { title: "Review registration" };
 
@@ -52,6 +53,41 @@ export default async function RegistrationDetail({ params }: { params: Promise<{
 
   const done = submission.status === "approved" || submission.status === "rejected";
 
+  // Quick-added divers still waiting on their family's registration. Any of
+  // them can be linked to a diver on this submission instead of creating a
+  // duplicate record; the closest name match is preselected.
+  const unregistered = done ? [] : (await db.query.divers.findMany({
+    where: and(eq(tables.divers.clubId, session.clubId), eq(tables.divers.status, "active")),
+    with: { family: { with: { guardians: true } }, primaryGroup: true },
+    orderBy: (d, { asc }) => [asc(d.legalName)],
+  })).filter((d) => d.family.status === UNREGISTERED_FAMILY_STATUS);
+
+  const norm = (x: string) => x.toLowerCase().replace(/[^a-z ]/g, "").replace(/\s+/g, " ").trim();
+  const subEmails = p.guardians.map((g) => g.email.toLowerCase().trim());
+  const subPhones = p.guardians.map((g) => g.phone.replace(/\D/g, "")).filter(Boolean);
+  const usedSuggestions = new Set<string>();
+  const suggestedLink = p.divers.map((d) => {
+    const names = [d.legalName, d.preferredName].filter(Boolean).map((x) => norm(x!));
+    const last = norm(d.legalName).split(" ").slice(-1)[0];
+    const first = norm(d.preferredName || d.legalName).split(" ")[0];
+    const scored = unregistered.map((u) => {
+      const un = norm(u.legalName);
+      const uParts = un.split(" ");
+      const contactHit = u.family.guardians.some((g) =>
+        (g.email && subEmails.includes(g.email.toLowerCase().trim())) ||
+        (g.phone && subPhones.includes(g.phone.replace(/\D/g, ""))));
+      let score = 0;
+      if (names.includes(un)) score = 3;
+      else if (uParts[0] === first && uParts[uParts.length - 1] === last) score = 3;
+      else if (uParts[uParts.length - 1] === last && contactHit) score = 2;
+      else if (uParts[0] === first && contactHit) score = 2;
+      return { id: u.id, score };
+    }).filter((x) => x.score >= 2 && !usedSuggestions.has(x.id)).sort((a, b) => b.score - a.score);
+    const pick = scored[0]?.id ?? "";
+    if (pick) usedSuggestions.add(pick);
+    return pick;
+  });
+
   // Possible-duplicate check: matching guardian email/phone, or a diver with
   // the same legal name + birth date, against families already in the club.
   // Informational only — approval always creates a new family; merging an
@@ -79,7 +115,7 @@ export default async function RegistrationDetail({ params }: { params: Promise<{
       }
     }
     possibleDuplicates = clubFamilies
-      .filter((f) => matches.has(f.id))
+      .filter((f) => matches.has(f.id) && f.status !== UNREGISTERED_FAMILY_STATUS && f.status !== "merged")
       .map((f) => ({ id: f.id, billingName: f.billingName, reason: matches.get(f.id)! }));
   }
 
@@ -184,6 +220,24 @@ export default async function RegistrationDetail({ params }: { params: Promise<{
                 USA Diving: {d.usaDiving.status === "have" ? (d.usaDiving.membershipNumber || "has one") : "not yet"}
               </span>
             </div>
+
+            {!done && unregistered.length > 0 && (
+              <div className={`rounded-lg p-3 ${suggestedLink[i] ? "bg-warn-soft" : "bg-paper"}`}>
+                <label className="label" htmlFor={`link_${i}`}>Link to a diver already on the roster?</label>
+                <select id={`link_${i}`} name={`link_${i}`} className="input" defaultValue={suggestedLink[i]}>
+                  <option value="">No — this is a new diver</option>
+                  {unregistered.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.legalName}{u.primaryGroup ? ` · ${u.primaryGroup.name}` : ""} · added {u.startDate ?? u.createdAt.toISOString().slice(0, 10)} (not yet registered)
+                    </option>
+                  ))}
+                </select>
+                <p className="hint mt-1">
+                  {suggestedLink[i] ? "Looks like a match — " : ""}Linking keeps their attendance and charges and fills in the
+                  registration details. Leaving group or plan on &ldquo;Decide later&rdquo; keeps what they already have.
+                </p>
+              </div>
+            )}
 
             {!done && (
               <div className="grid gap-3 md:grid-cols-2 pt-2 border-t border-line">

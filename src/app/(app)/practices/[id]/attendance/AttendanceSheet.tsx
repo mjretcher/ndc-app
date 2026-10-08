@@ -2,6 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { setAttendance, markRemainingAbsent } from "@/app/actions/attendance";
+import { quickAddDiver } from "@/app/actions/quick-add";
+
+export type QuickAddOptions = {
+  practiceDate: string;
+  groups: { id: string; name: string }[];
+  plans: { id: string; label: string }[];
+  defaultGroupId: string;
+  defaultPlanId: string;
+};
 
 export type RosterDiver = {
   diverId: string;
@@ -12,6 +21,7 @@ export type RosterDiver = {
   billable: boolean;
   billableReason: string | null;
   isWalkOn?: boolean;
+  isNew?: boolean;
 };
 
 const STATUSES = [
@@ -21,10 +31,11 @@ const STATUSES = [
   { key: "trial", label: "Trial", cls: "bg-accent text-white", idle: "border-accent text-accent" },
 ] as const;
 
-export function AttendanceSheet({ practiceId, initialRoster, walkOnOptions }: {
+export function AttendanceSheet({ practiceId, initialRoster, walkOnOptions, quickAdd }: {
   practiceId: string;
   initialRoster: RosterDiver[];
   walkOnOptions: { diverId: string; name: string; group: string | null; groupColor: string | null }[];
+  quickAdd: QuickAddOptions;
 }) {
   const [roster, setRoster] = useState(initialRoster);
   const [walkOns, setWalkOns] = useState(walkOnOptions);
@@ -81,6 +92,40 @@ export function AttendanceSheet({ practiceId, initialRoster, walkOnOptions }: {
     });
   }
 
+  const [qaOpen, setQaOpen] = useState(false);
+  const [qaBusy, setQaBusy] = useState(false);
+  const [qaError, setQaError] = useState<string | null>(null);
+
+  async function submitQuickAdd(form: HTMLFormElement) {
+    const fd = new FormData(form);
+    const name = String(fd.get("name") || "").trim();
+    if (!name) { setQaError("Enter the diver's name."); return; }
+    setQaBusy(true);
+    setQaError(null);
+    try {
+      const created = await quickAddDiver({
+        name,
+        groupId: String(fd.get("groupId") || "") || null,
+        planId: String(fd.get("planId") || "") || null,
+        startDate: quickAdd.practiceDate,
+        parentName: String(fd.get("parentName") || "") || null,
+        parentEmail: String(fd.get("parentEmail") || "") || null,
+        parentPhone: String(fd.get("parentPhone") || "") || null,
+      });
+      setRoster((rs) => [...rs, {
+        diverId: created.diverId, name: created.name, group: created.group, groupColor: created.groupColor,
+        isNew: true, status: "present", billable: true, billableReason: null,
+      }]);
+      await setAttendance({ practiceId, diverId: created.diverId, status: "present" });
+      form.reset();
+      setQaOpen(false);
+    } catch (e) {
+      setQaError(e instanceof Error && e.message ? e.message : "Couldn't add the diver — check your connection and try again.");
+    } finally {
+      setQaBusy(false);
+    }
+  }
+
   async function sweepAbsent() {
     const ids = roster.filter((r) => r.status === "unmarked").map((r) => r.diverId);
     if (ids.length === 0) return;
@@ -120,6 +165,7 @@ export function AttendanceSheet({ practiceId, initialRoster, walkOnOptions }: {
                 </span>
               )}
               {r.isWalkOn && <span className="chip chip-warn">Not usually in this practice</span>}
+              {r.isNew && <span className="chip chip-warn">Not yet registered</span>}
             </div>
             <div className="mt-2 grid grid-cols-4 gap-1.5">
               {STATUSES.map((s) => (
@@ -153,6 +199,36 @@ export function AttendanceSheet({ practiceId, initialRoster, walkOnOptions }: {
           </select>
         </div>
       )}
+
+      <div className="card p-3">
+        {!qaOpen ? (
+          <button type="button" onClick={() => setQaOpen(true)} className="text-sm font-semibold text-navy">
+            + New kid who hasn&apos;t registered yet
+          </button>
+        ) : (
+          <form onSubmit={(e) => { e.preventDefault(); submitQuickAdd(e.currentTarget); }} className="space-y-2">
+            <p className="label">Quick add a diver</p>
+            <p className="hint">Adds them to the club and marks them here. Link them to their family&apos;s registration when it comes in.</p>
+            <input name="name" required placeholder="Diver's full name" className="input" aria-label="Diver's full name" autoFocus />
+            <select name="groupId" defaultValue={quickAdd.defaultGroupId} className="input" aria-label="Group">
+              <option value="">Group — decide later</option>
+              {quickAdd.groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+            <select name="planId" defaultValue={quickAdd.defaultPlanId} className="input" aria-label="Billing plan">
+              <option value="">Billing plan — decide later</option>
+              {quickAdd.plans.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+            <input name="parentName" placeholder="Parent name (optional)" className="input" aria-label="Parent name" />
+            <input name="parentEmail" type="email" placeholder="Parent email (optional)" className="input" aria-label="Parent email" />
+            <input name="parentPhone" type="tel" placeholder="Parent phone (optional)" className="input" aria-label="Parent phone" />
+            {qaError && <p role="alert" className="error-text">{qaError}</p>}
+            <div className="flex gap-2">
+              <button type="submit" disabled={qaBusy} className="btn btn-primary flex-1">{qaBusy ? "Adding…" : "Add & mark here"}</button>
+              <button type="button" onClick={() => { setQaOpen(false); setQaError(null); }} className="btn btn-secondary">Cancel</button>
+            </div>
+          </form>
+        )}
+      </div>
 
       {/* Sweep bar */}
       {counts.unmarked > 0 && (

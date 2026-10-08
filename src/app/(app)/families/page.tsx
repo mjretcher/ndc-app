@@ -1,3 +1,4 @@
+import { UNREGISTERED_FAMILY_STATUS, familyStatusLabel } from "@/lib/server/family-merge";
 import Link from "next/link";
 import { db, tables } from "@/db";
 import { and, eq, ilike, asc } from "drizzle-orm";
@@ -57,7 +58,7 @@ export default async function FamiliesPage({ searchParams }: { searchParams: Pro
                       </span>
                     ))}
                   </div>
-                  {f.status !== "active" && <span className="chip chip-mute">{f.status}</span>}
+                  {f.status !== "active" && <span className={`chip ${f.status === UNREGISTERED_FAMILY_STATUS ? "chip-warn" : "chip-mute"}`}>{familyStatusLabel(f.status)}</span>}
                 </Link>
               </li>
             );

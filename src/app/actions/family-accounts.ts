@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/server/session";
 import { recordAudit } from "@/lib/server/audit";
+import { repointFamilyRecords, UNREGISTERED_FAMILY_STATUS } from "@/lib/server/family-merge";
 
 /**
  * Fold a duplicate family record into the canonical one: every guardian,
@@ -54,15 +55,12 @@ export async function mergeFamilies(formData: FormData) {
         }
       }
     }
-    await tx.update(tables.divers).set({ familyId: keepFamilyId }).where(eq(tables.divers.familyId, mergeFamilyId));
-    await tx.update(tables.charges).set({ familyId: keepFamilyId }).where(eq(tables.charges.familyId, mergeFamilyId));
-    await tx.update(tables.invoices).set({ familyId: keepFamilyId }).where(eq(tables.invoices.familyId, mergeFamilyId));
-    await tx.update(tables.credits).set({ familyId: keepFamilyId }).where(eq(tables.credits.familyId, mergeFamilyId));
-    await tx.update(tables.payments).set({ familyId: keepFamilyId }).where(eq(tables.payments.familyId, mergeFamilyId));
-    await tx.update(tables.discountsAndAid).set({ familyId: keepFamilyId }).where(eq(tables.discountsAndAid.familyId, mergeFamilyId));
-    await tx.update(tables.registrationSubmissions).set({ resultingFamilyId: keepFamilyId }).where(eq(tables.registrationSubmissions.resultingFamilyId, mergeFamilyId));
-    // Repoint any portal login scoped to the old family.
-    await tx.update(tables.clubMemberships).set({ familyId: keepFamilyId }).where(eq(tables.clubMemberships.familyId, mergeFamilyId));
+    await repointFamilyRecords(tx, mergeFamilyId, keepFamilyId);
+    // Folding a registered family into a quick-added placeholder makes the
+    // placeholder a real, registered family.
+    if (keep.status === UNREGISTERED_FAMILY_STATUS && merge.status === "active") {
+      await tx.update(tables.families).set({ status: "active" }).where(eq(tables.families.id, keepFamilyId));
+    }
 
     await tx.update(tables.families).set({
       status: "merged",
