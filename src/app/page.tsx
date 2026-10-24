@@ -210,8 +210,8 @@ export default async function HomePage() {
           <h2 className="font-serif font-semibold text-3xl mb-3">This week and next.</h2>
           <p className="text-mute text-lg">
             {sharedFacilityName
-              ? `All practices are held at ${sharedFacilityName}. Updated live as coaches change the schedule.`
-              : "Updated live as coaches change the schedule. Locations are listed on each practice."}
+              ? `All practices are held at ${sharedFacilityName}.`
+              : "Locations are listed with each practice."}
           </p>
         </div>
         <div className="space-y-10">
