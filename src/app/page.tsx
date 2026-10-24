@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { PublicNav, PublicFooter } from "@/components/PublicSite";
 import { Logo } from "@/components/Logo";
-import { getCurrentWeekSchedule } from "@/lib/server/public-schedule";
+import { getLiveTwoWeekSchedule, type LiveDay } from "@/lib/server/public-schedule";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +52,7 @@ const jsonLd = {
 };
 
 export default async function HomePage() {
-  const { days: schedule, primaryFacilityName } = await getCurrentWeekSchedule();
+  const { weeks, sharedFacilityName } = await getLiveTwoWeekSchedule();
 
   return (
     <div className="bg-paper text-ink">
@@ -74,7 +74,7 @@ export default async function HomePage() {
             </p>
             <div className="flex items-center gap-6 flex-wrap">
               <Link href="/register" className="btn btn-primary !min-h-12 !px-7 text-base">Book a free trial practice</Link>
-              <a href="#schedule" className="font-bold text-navy border-b-2 border-accent pb-0.5">See this month&rsquo;s schedule</a>
+              <a href="#schedule" className="font-bold text-navy border-b-2 border-accent pb-0.5">See this week&rsquo;s schedule</a>
             </div>
           </div>
           <div className="relative bg-ink min-h-[280px] md:min-h-[480px] rounded-2xl md:rounded-3xl overflow-hidden flex items-center justify-center">
@@ -207,29 +207,34 @@ export default async function HomePage() {
       {/* ---- Schedule ---- */}
       <section id="schedule" className="mx-auto max-w-6xl px-5 md:px-10 py-16 md:py-20">
         <div className="max-w-[56ch] mb-8">
-          <h2 className="font-serif font-semibold text-3xl mb-3">What a normal week looks like.</h2>
+          <h2 className="font-serif font-semibold text-3xl mb-3">This week and next.</h2>
           <p className="text-mute text-lg">
-            {primaryFacilityName ? `All practices this month are held at ${primaryFacilityName}.` : "Reach out for current practice locations."}
+            {sharedFacilityName
+              ? `All practices are held at ${sharedFacilityName}. Updated live as coaches change the schedule.`
+              : "Updated live as coaches change the schedule. Locations are listed on each practice."}
           </p>
         </div>
-        {schedule.length > 0 ? (
-          <div className="flex gap-3.5 overflow-x-auto pb-2">
-            {schedule.map((d) => (
-              <div key={d.day} className={`flex-none w-48 rounded-2xl border p-5 ${d.requiresSignup ? "bg-accent-soft border-accent" : "bg-card border-line"}`}>
-                <p className="font-serif font-semibold text-lg mb-2">{d.day}</p>
-                <p className="font-bold text-navy mb-1">{d.time}</p>
-                <p className="text-sm text-mute">{d.requiresSignup ? "Sign-up required" : "Weekday practice"}</p>
-                {d.requiresSignup && d.minSignupCount && (
-                  <span className="inline-block mt-2 text-xs font-bold text-accent bg-white px-2.5 py-1 rounded-full">
-                    Cancels if under {d.minSignupCount}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-mute">Schedule coming soon &mdash; reach out and we&rsquo;ll walk you through practice times.</p>
-        )}
+        <div className="space-y-10">
+          {weeks.map((week) => (
+            <div key={week.start}>
+              <h3 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
+                <span className="font-serif font-semibold text-xl">{week.label}</span>
+                <span className="text-mute font-semibold">{week.rangeLabel}</span>
+              </h3>
+              {week.days.length > 0 ? (
+                <div className="flex gap-3.5 overflow-x-auto pb-2 -mx-5 px-5 md:mx-0 md:px-0">
+                  {week.days.map((d) => (
+                    <DayCard key={d.date} day={d} showFacility={!sharedFacilityName} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-mute rounded-2xl border border-dashed border-line px-5 py-4">
+                  No practices scheduled this week.
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
         <p className="mt-5">
           <Link href="/schedule" className="font-bold text-navy border-b-2 border-accent pb-0.5">
             Download or print the full monthly calendar
@@ -252,6 +257,53 @@ export default async function HomePage() {
       </section>
 
       <PublicFooter />
+    </div>
+  );
+}
+
+function DayCard({ day, showFacility }: { day: LiveDay; showFacility: boolean }) {
+  const allCanceled = day.practices.every((p) => p.status === "canceled");
+  const anySignup = day.practices.some((p) => p.requiresSignup && p.status !== "canceled");
+  const tone = day.isToday
+    ? "bg-card border-navy ring-2 ring-navy"
+    : anySignup
+      ? "bg-accent-soft border-accent"
+      : "bg-card border-line";
+  return (
+    <div className={`flex-none w-52 rounded-2xl border p-5 ${tone} ${day.isPast ? "opacity-60" : ""}`}>
+      <div className="flex items-center justify-between gap-2 mb-0.5">
+        <p className="font-serif font-semibold text-lg">{day.weekday}</p>
+        {day.isToday && (
+          <span className="text-[11px] font-bold uppercase tracking-wide text-white bg-navy px-2 py-0.5 rounded-full">Today</span>
+        )}
+      </div>
+      <p className="text-sm font-semibold text-mute mb-3">{day.dateLabel}</p>
+      <div className="space-y-3">
+        {day.practices.map((p) => {
+          const canceled = p.status === "canceled";
+          return (
+            <div key={p.id}>
+              <p className={`font-bold ${canceled ? "text-mute line-through" : "text-navy"}`}>{p.time}</p>
+              {canceled ? (
+                <p className="text-sm font-bold text-danger">Canceled</p>
+              ) : (
+                <p className="text-sm text-mute">
+                  {p.requiresSignup ? "Sign-up required" : p.category === "saturday" || p.category === "sunday" ? "Weekend practice" : p.category === "clinic" ? "Clinic" : "Weekday practice"}
+                  {p.status === "changed" && <span className="font-bold text-warn"> &middot; Updated</span>}
+                </p>
+              )}
+              {showFacility && p.facilityName && !canceled && <p className="text-sm text-mute">{p.facilityName}</p>}
+              {p.note && <p className="text-sm text-ink mt-1">{p.note}</p>}
+              {p.requiresSignup && !canceled && p.minSignupCount && (
+                <span className="inline-block mt-2 text-xs font-bold text-accent bg-white px-2.5 py-1 rounded-full">
+                  Cancels if under {p.minSignupCount}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {allCanceled && day.practices.length > 1 && <p className="sr-only">All practices canceled</p>}
     </div>
   );
 }

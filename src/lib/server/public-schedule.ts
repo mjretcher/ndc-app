@@ -1,7 +1,129 @@
 import "server-only";
 import { db, tables } from "@/db";
-import { and, eq, lte, gte } from "drizzle-orm";
-import { todayYMD, formatLocalTime, localToUtc } from "@/lib/dates";
+import { and, asc, eq, gte, lte } from "drizzle-orm";
+import { todayYMD, formatLocalTime, localToUtc, addDaysYMD, ymdDayOfWeek, ymdToUtcNoon, type YMD } from "@/lib/dates";
+
+export type LivePractice = {
+  id: string;
+  time: string;
+  facilityName: string | null;
+  status: "scheduled" | "changed" | "canceled" | "completed";
+  requiresSignup: boolean;
+  minSignupCount: number | null;
+  category: string;
+  note: string | null;
+};
+
+export type LiveDay = {
+  date: YMD;
+  weekday: string; // "Monday"
+  dateLabel: string; // "October 26, 2026"
+  isToday: boolean;
+  isPast: boolean;
+  practices: LivePractice[];
+};
+
+export type LiveWeek = {
+  label: string; // "This week" | "Next week"
+  rangeLabel: string; // "Oct 19 – 25, 2026"
+  start: YMD;
+  end: YMD;
+  days: LiveDay[]; // only days that have at least one practice
+};
+
+export type LiveSchedule = {
+  weeks: LiveWeek[];
+  /** Set when every practice across both weeks is at the same facility. */
+  sharedFacilityName: string | null;
+};
+
+const fmt = (ymd: YMD, opts: Intl.DateTimeFormatOptions) =>
+  new Intl.DateTimeFormat("en-US", { timeZone: "UTC", ...opts }).format(ymdToUtcNoon(ymd));
+
+function rangeLabel(start: YMD, end: YMD): string {
+  const sameMonth = start.slice(0, 7) === end.slice(0, 7);
+  const sameYear = start.slice(0, 4) === end.slice(0, 4);
+  const startPart = fmt(start, sameYear ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
+  const endPart = fmt(end, sameMonth ? { day: "numeric", year: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
+  return `${startPart} – ${endPart}`;
+}
+
+/** Monday of the club-local week containing `ymd`. */
+function mondayOf(ymd: YMD): YMD {
+  const dow = ymdDayOfWeek(ymd); // 0=Sun..6=Sat
+  return addDaysYMD(ymd, dow === 0 ? -6 : 1 - dow);
+}
+
+/**
+ * Live public schedule: actual practice occurrences for the current
+ * Monday–Sunday week and the following week. Reflects cancellations,
+ * one-off practices, time changes, and facility changes as coaches make them.
+ */
+export async function getLiveTwoWeekSchedule(): Promise<LiveSchedule> {
+  const club = await db.query.clubs.findFirst();
+  if (!club) return { weeks: [], sharedFacilityName: null };
+
+  const today = todayYMD();
+  const thisMonday = mondayOf(today);
+  const nextMonday = addDaysYMD(thisMonday, 7);
+  const lastDay = addDaysYMD(nextMonday, 6);
+
+  const rows = await db.query.practices.findMany({
+    where: and(
+      eq(tables.practices.clubId, club.id),
+      gte(tables.practices.practiceDate, thisMonday),
+      lte(tables.practices.practiceDate, lastDay),
+    ),
+    with: { facility: true },
+    orderBy: [asc(tables.practices.practiceDate), asc(tables.practices.startsAt)],
+  });
+
+  // Cancellations stay visible (shown struck through) so families aren't left guessing.
+  const facilityNames = new Set<string>();
+  const byDate = new Map<YMD, LivePractice[]>();
+  for (const p of rows) {
+    const facilityName = p.facility?.name ?? null;
+    if (facilityName && p.status !== "canceled") facilityNames.add(facilityName);
+    const list = byDate.get(p.practiceDate) ?? [];
+    list.push({
+      id: p.id,
+      time: `${formatLocalTime(p.startsAt)}–${formatLocalTime(p.endsAt)}`,
+      facilityName,
+      status: p.status,
+      requiresSignup: p.requiresSignup,
+      minSignupCount: p.minSignupCount,
+      category: p.category,
+      note: p.publicDescription?.trim() || null,
+    });
+    byDate.set(p.practiceDate, list);
+  }
+
+  const buildWeek = (label: string, start: YMD): LiveWeek => {
+    const end = addDaysYMD(start, 6);
+    const days: LiveDay[] = [];
+    for (let i = 0; i < 7; i++) {
+      const date = addDaysYMD(start, i);
+      const practices = byDate.get(date);
+      if (!practices?.length) continue;
+      days.push({
+        date,
+        weekday: fmt(date, { weekday: "long" }),
+        dateLabel: fmt(date, { month: "long", day: "numeric", year: "numeric" }),
+        isToday: date === today,
+        isPast: date < today,
+        practices,
+      });
+    }
+    return { label, rangeLabel: rangeLabel(start, end), start, end, days };
+  };
+
+  return {
+    weeks: [buildWeek("This week", thisMonday), buildWeek("Next week", nextMonday)],
+    sharedFacilityName: facilityNames.size === 1 ? [...facilityNames][0] : null,
+  };
+}
+
+// ---- Template week (used by the family portal) ----
 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
