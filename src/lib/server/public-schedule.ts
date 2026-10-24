@@ -41,11 +41,12 @@ const fmt = (ymd: YMD, opts: Intl.DateTimeFormatOptions) =>
   new Intl.DateTimeFormat("en-US", { timeZone: "UTC", ...opts }).format(ymdToUtcNoon(ymd));
 
 function rangeLabel(start: YMD, end: YMD): string {
-  const sameMonth = start.slice(0, 7) === end.slice(0, 7);
-  const sameYear = start.slice(0, 4) === end.slice(0, 4);
-  const startPart = fmt(start, sameYear ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
-  const endPart = fmt(end, sameMonth ? { day: "numeric", year: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
-  return `${startPart} – ${endPart}`;
+  const [sy, sm, sd] = start.split("-").map(Number);
+  const [ey, em, ed] = end.split("-").map(Number);
+  const mon = (ymd: YMD) => fmt(ymd, { month: "short" });
+  if (sy === ey && sm === em) return `${mon(start)} ${sd} \u2013 ${ed}, ${ey}`;
+  if (sy === ey) return `${mon(start)} ${sd} \u2013 ${mon(end)} ${ed}, ${ey}`;
+  return `${mon(start)} ${sd}, ${sy} \u2013 ${mon(end)} ${ed}, ${ey}`;
 }
 
 /** Monday of the club-local week containing `ymd`. */
@@ -85,6 +86,13 @@ export async function getLiveTwoWeekSchedule(): Promise<LiveSchedule> {
     const facilityName = p.facility?.name ?? null;
     if (facilityName && p.status !== "canceled") facilityNames.add(facilityName);
     const list = byDate.get(p.practiceDate) ?? [];
+    const time = `${formatLocalTime(p.startsAt)}\u2013${formatLocalTime(p.endsAt)}`;
+    // Two groups practicing at the same time/place look identical to families — show once.
+    const dup = list.find((x) => x.time === time && x.facilityName === facilityName && (x.status === "canceled") === (p.status === "canceled"));
+    if (dup) {
+      dup.requiresSignup = dup.requiresSignup && p.requiresSignup;
+      continue;
+    }
     list.push({
       id: p.id,
       time: `${formatLocalTime(p.startsAt)}–${formatLocalTime(p.endsAt)}`,

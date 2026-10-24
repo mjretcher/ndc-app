@@ -289,7 +289,6 @@ function DayCard({ day, showFacility }: { day: LiveDay; showFacility: boolean })
               ) : (
                 <p className="text-sm text-mute">
                   {p.requiresSignup ? "Sign-up required" : p.category === "saturday" || p.category === "sunday" ? "Weekend practice" : p.category === "clinic" ? "Clinic" : "Weekday practice"}
-                  {p.status === "changed" && <span className="font-bold text-warn"> &middot; Updated</span>}
                 </p>
               )}
               {showFacility && p.facilityName && !canceled && <p className="text-sm text-mute">{p.facilityName}</p>}
