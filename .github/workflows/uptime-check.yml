@@ -15,9 +15,15 @@ jobs:
     steps:
       - name: Check the homepage responds
         run: |
-          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "https://napoleondivingclub.com/")
+          # The apex domain is a 308 redirect to www on Vercel, so follow
+          # redirects (-L) and judge the final response. Retry a couple of
+          # times so a single slow edge response does not page anyone.
+          code=$(curl -sL -o /dev/null -w "%{http_code}" \
+            --max-time 20 --retry 2 --retry-delay 5 --retry-all-errors \
+            -A "ndc-uptime-check/1.0 (GitHub Actions)" \
+            "https://napoleondivingclub.com/")
           echo "HTTP $code"
           if [ "$code" != "200" ]; then
-            echo "::error::napoleondivingclub.com returned HTTP $code instead of 200"
+            echo "::error::napoleondivingclub.com returned HTTP $code instead of 200 after following redirects"
             exit 1
           fi
