@@ -86,12 +86,40 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         const u = user as { id: string; role: string; clubId: string; familyId?: string; submissionId?: string };
         token.uid = u.id; token.role = u.role; token.clubId = u.clubId;
         if (u.familyId) token.familyId = u.familyId;
         if (u.submissionId) token.submissionId = u.submissionId;
+      }
+      // A guardian who signed in while their registration was still pending
+      // carries a "family_pending" token for the life of the session. Once a
+      // coach approves it, promote them to their real family login here so
+      // they don't have to sign out and back in to reach practice sign-up.
+      if (token.role === "family_pending" && token.submissionId && token.email) {
+        const submission = await db.query.registrationSubmissions.findFirst({
+          where: eq(tables.registrationSubmissions.id, token.submissionId as string),
+        });
+        if (submission?.status === "approved") {
+          const account = await db.query.users.findFirst({
+            where: eq(tables.users.email, String(token.email).toLowerCase().trim()),
+          });
+          const membership = account?.active
+            ? await db.query.clubMemberships.findFirst({
+                where: and(
+                  eq(tables.clubMemberships.userId, account.id),
+                  eq(tables.clubMemberships.clubId, submission.clubId),
+                ),
+              })
+            : undefined;
+          if (account && membership?.active && membership.role === "family" && membership.familyId) {
+            token.uid = account.id;
+            token.role = "family";
+            token.familyId = membership.familyId;
+            delete token.submissionId;
+          }
+        }
       }
       return token;
     },

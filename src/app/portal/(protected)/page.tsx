@@ -91,9 +91,10 @@ export default async function PortalHome({
     with: { primaryGroup: true },
   });
 
-  const groupIds = divers.map((d) => d.primaryGroupId).filter((g): g is string => !!g);
-
-  const practices = groupIds.length
+  // A diver with no group yet still sees every practice that's open to all
+  // groups (isDiverEligibleForPractice handles the null group), so a missing
+  // group assignment never leaves a family with nothing to sign up for.
+  const practices = divers.length
     ? await db.query.practices.findMany({
         where: and(
           eq(tables.practices.clubId, session.clubId),
@@ -112,6 +113,16 @@ export default async function PortalHome({
       })
     : [];
   const rsvpMap = new Map(rsvps.map((r) => [`${r.practiceId}:${r.diverId}`, r.status]));
+
+  const missingMemberships = diverIds.length
+    ? await db.query.diverMemberships.findMany({
+        where: and(
+          inArray(tables.diverMemberships.diverId, diverIds),
+          inArray(tables.diverMemberships.verification, ["missing", "expired"]),
+        ),
+      })
+    : [];
+  const membershipGuides = { aau: { label: "AAU", href: "/guides/aau" }, usa_diving: { label: "USA Diving", href: "/guides/usa-diving" } };
 
   const weekLabel = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric" });
   const rangeLabel = `${weekLabel.format(new Date(rangeStart + "T12:00:00Z"))} – ${weekLabel.format(new Date(rangeEnd + "T12:00:00Z"))}`;
@@ -144,6 +155,17 @@ export default async function PortalHome({
               {diver.preferredName || diver.legalName}
               {diver.primaryGroup && <span className="text-mute font-normal"> · {diver.primaryGroup.name}</span>}
             </h2>
+            {missingMemberships.filter((m) => m.diverId === diver.id).map((m) => {
+              const guide = membershipGuides[m.organization];
+              return (
+                <p key={m.id} className="mb-3 rounded-xl bg-warn-soft px-3 py-2 text-sm">
+                  {guide.label} membership {m.verification === "expired" ? "has expired" : "is still needed"}.{" "}
+                  <a href={guide.href} className="underline text-navy font-medium" target="_blank" rel="noopener noreferrer">
+                    How to sign up for {guide.label} →
+                  </a>
+                </p>
+              );
+            })}
             {eligible.length === 0 && <p className="text-sm text-mute">No practices scheduled this week.</p>}
             <ul className="divide-y divide-[var(--color-line)]">
               {eligible.map((p) => {

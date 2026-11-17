@@ -54,6 +54,9 @@ export default async function DiverDetail({ params }: { params: Promise<{ id: st
               {diver.primaryGroup.name}
             </span>
           )}
+          {!diver.primaryGroup && diver.status === "active" && (
+            <a href="#group" className="chip chip-warn">No group assigned</a>
+          )}
           {diver.status !== "active" && <span className="chip chip-mute">{diver.status}</span>}
           {diver.family.status === UNREGISTERED_FAMILY_STATUS && <span className="chip chip-warn">Not yet registered</span>}
         </div>
