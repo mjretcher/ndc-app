@@ -23,7 +23,11 @@ export async function updateDiver(formData: FormData) {
     school: String(formData.get("school") || "") || null,
     grade: String(formData.get("grade") || "") || null,
     status: String(formData.get("status") || diver.status) as "active" | "inactive" | "prospective",
-    primaryGroupId: String(formData.get("primaryGroupId") || "") || null,
+    // Group has its own form on the diver page; only touch it here if a
+    // caller actually sends the field.
+    primaryGroupId: formData.has("primaryGroupId")
+      ? String(formData.get("primaryGroupId") || "") || null
+      : diver.primaryGroupId,
     activitiesNotes: String(formData.get("activitiesNotes") || "") || null,
   };
   await db.transaction(async (tx) => {
@@ -34,6 +38,35 @@ export async function updateDiver(formData: FormData) {
       summary: `Updated diver ${patch.preferredName || patch.legalName}`,
       before: { status: diver.status, primaryGroupId: diver.primaryGroupId },
       after: { status: patch.status, primaryGroupId: patch.primaryGroupId },
+    });
+  });
+  revalidatePath(`/divers/${diverId}`);
+  revalidatePath("/divers");
+}
+
+/** Assign (or clear) a diver's group on its own, without touching the rest of the profile. */
+export async function setDiverGroup(formData: FormData) {
+  const session = await requireCoach();
+  const diverId = String(formData.get("diverId"));
+  const diver = await db.query.divers.findFirst({
+    where: and(eq(tables.divers.id, diverId), eq(tables.divers.clubId, session.clubId)),
+  });
+  if (!diver) throw new Error("Diver not found.");
+  const groupId = String(formData.get("primaryGroupId") || "") || null;
+  if (groupId) {
+    const group = await db.query.groups.findFirst({
+      where: and(eq(tables.groups.id, groupId), eq(tables.groups.clubId, session.clubId)),
+    });
+    if (!group) throw new Error("Group not found.");
+  }
+  await db.transaction(async (tx) => {
+    await tx.update(tables.divers).set({ primaryGroupId: groupId }).where(eq(tables.divers.id, diverId));
+    await recordAudit(tx, {
+      clubId: session.clubId, actorUserId: session.userId,
+      action: "diver.update", entityType: "diver", entityId: diverId,
+      summary: `Changed group for ${diver.preferredName || diver.legalName}`,
+      before: { primaryGroupId: diver.primaryGroupId },
+      after: { primaryGroupId: groupId },
     });
   });
   revalidatePath(`/divers/${diverId}`);

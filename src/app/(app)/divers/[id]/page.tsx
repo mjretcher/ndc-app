@@ -7,7 +7,7 @@ import { formatCents } from "@/lib/money";
 import { todayYMD } from "@/lib/dates";
 import { UNREGISTERED_FAMILY_STATUS } from "@/lib/server/family-merge";
 import {
-  updateDiver, updateDiverMedical, updateMembership, sendMembershipReminder, assignPlan,
+  updateDiver, setDiverGroup, updateDiverMedical, updateMembership, sendMembershipReminder, assignPlan,
 } from "@/app/actions/families";
 
 export const metadata = { title: "Diver" };
@@ -55,7 +55,7 @@ export default async function DiverDetail({ params }: { params: Promise<{ id: st
             </span>
           )}
           {!diver.primaryGroup && diver.status === "active" && (
-            <a href="#group" className="chip chip-warn">No group assigned</a>
+            <a href="#group-card" className="chip chip-warn">No group assigned</a>
           )}
           {diver.status !== "active" && <span className="chip chip-mute">{diver.status}</span>}
           {diver.family.status === UNREGISTERED_FAMILY_STATUS && <span className="chip chip-warn">Not yet registered</span>}
@@ -76,6 +76,25 @@ export default async function DiverDetail({ params }: { params: Promise<{ id: st
       )}
 
       {/* Memberships */}
+      {/* Group */}
+      <section id="group-card" aria-labelledby="group-h" className={`card p-4 ${diver.primaryGroup ? "" : "border-warn"}`}>
+        <h2 id="group-h" className="eyebrow mb-2">Group</h2>
+        {!diver.primaryGroup && (
+          <p className="text-sm mb-2">
+            No group assigned yet. Pick one so this diver lands on the right practice rosters.
+          </p>
+        )}
+        <form action={setDiverGroup} className="flex flex-wrap gap-2">
+          <input type="hidden" name="diverId" value={diver.id} />
+          <label className="sr-only" htmlFor="group">Group</label>
+          <select id="group" name="primaryGroupId" defaultValue={diver.primaryGroupId ?? ""} className="input flex-1 min-w-48">
+            <option value="">No group</option>
+            {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+          </select>
+          <button className="btn btn-primary">Save group</button>
+        </form>
+      </section>
+
       <section aria-labelledby="mem-h" className="grid gap-4 md:grid-cols-2">
         {(["aau", "usa_diving"] as const).map((org) => {
           const m = memFor(org);
@@ -200,13 +219,6 @@ export default async function DiverDetail({ params }: { params: Promise<{ id: st
           <div>
             <label className="label" htmlFor="grade">Grade</label>
             <input id="grade" name="grade" defaultValue={diver.grade ?? ""} className="input" />
-          </div>
-          <div>
-            <label className="label" htmlFor="group">Group</label>
-            <select id="group" name="primaryGroupId" defaultValue={diver.primaryGroupId ?? ""} className="input">
-              <option value="">No group</option>
-              {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
           </div>
           <div>
             <label className="label" htmlFor="status">Status</label>
